@@ -30,11 +30,11 @@ export function capasDecanatos(zonas: Zona[], lim: Limites, radios: Radio[], dec
     // de abajo hacia arriba: relleno de zonas, radios del decanato (líneas finas), radio elegido, máscara de afuera, bordes de zona, contorno,
     // nombres de los decanatos, líneas a las capillas, puntos del modo ubicar, mi ubicación y los marcadores
     capas: [
-      { id: 'zonas_relleno', type: 'fill', source: 'zonas', paint: { 'fill-color': col((z, i) => estiloZona(z.decanato, i).base, '#cccccc'), 'fill-opacity': col((z, i) => estiloZona(z.decanato, i).alpha, 0.3) } },
+      { id: 'zonas_relleno', type: 'fill', source: 'zonas', paint: { 'fill-color': col((z, i) => estiloZona(z.decanato, i).base, '#cccccc'), 'fill-opacity': col((z, i) => estiloZona(z.decanato, i).alpha * 0.3, 0.1) } }, // ya sutil desde el primer cuadro (lo mismo que aplica zonas.ts)
       { id: 'radios_linea', type: 'line', source: 'radios', filter: NADA, layout: { 'line-join': 'round' }, paint: { 'line-color': '#1f2937', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.5, 14, 0.9, 17, 1.4], 'line-opacity': 0.6 } },
       { id: 'radio_sel_relleno', type: 'fill', source: 'radios', filter: NADA, paint: { 'fill-color': col((z, i) => estiloZona(z.decanato, i).base, '#cccccc'), 'fill-opacity': 0.3 } },
       { id: 'mascara', type: 'fill', source: 'mascara', paint: { 'fill-color': '#0b2540', 'fill-opacity': 0.25 } },
-      { id: 'zonas_borde', type: 'line', source: 'zonas', layout: { 'line-join': 'round' }, paint: { 'line-color': col((z, i) => estiloZona(z.decanato, i).borde, '#666666'), 'line-width': 2.5, 'line-opacity': 0.95 } },
+      { id: 'zonas_borde', type: 'line', source: 'zonas', layout: { 'line-join': 'round' }, paint: { 'line-color': col((z, i) => estiloZona(z.decanato, i).borde, '#666666'), 'line-width': 1.4, 'line-opacity': 0.75 } },
       { id: 'radio_sel_borde', type: 'line', source: 'radios', filter: NADA, layout: { 'line-join': 'round' }, paint: { 'line-color': col((z, i) => estiloZona(z.decanato, i).borde, '#333333'), 'line-width': 3.5, 'line-opacity': 1 } },
       { id: 'contorno', type: 'line', source: 'contorno', layout: { 'line-join': 'round' }, paint: { 'line-color': '#003c71', 'line-width': 1.8, 'line-opacity': 0.8 } },
       {

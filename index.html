@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Mapa de las parroquias y capillas de la Diócesis de Avellaneda-Lanús, con su radio parroquial, su decanato y sus datos de contacto." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2712%27 fill=%27%23003c71%27 stroke=%27%23cfb43c%27 stroke-width=%273%27/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;600;700&display=swap" />
+  <title>Mapa de parroquias · Guía diocesana Avellaneda-Lanús</title>
+</head>
+<body>
+  <div id="app">
+    <header id="top">
+      <h1>Mapa de parroquias <span>Guía diocesana</span></h1>
+      <a class="volver-guia" href="https://avellanedalanus.org.ar/guia-diocesana/" target="_top">← <span class="largo">Volver a la </span>Guía</a>
+      <div class="cab-acciones">
+        <button id="btn-todo" class="btn-cab" type="button">Ver todo</button>
+        <button id="btn-mas" class="btn-cab btn-mas" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-mas" aria-label="Más opciones">⋯</button>
+      </div>
+    </header>
+
+    <div id="menu-mas" role="menu" hidden>
+      <button type="button" role="menuitem" data-menu="colegios" id="menu-colegios">Mostrar colegios en el mapa</button>
+      <button type="button" role="menuitem" data-menu="acerca">Acerca de este mapa</button>
+    </div>
+
+    <aside id="panel" class="medio">
+      <button id="handle" type="button" aria-label="Abrir o cerrar el panel"><span></span></button>
+      <div class="buscador">
+        <input id="q" type="search" placeholder="Buscar parroquia, calle o localidad" autocomplete="off" enterkeyhint="search" aria-label="Buscar parroquia, calle o localidad" />
+      </div>
+      <div id="contenido" class="vista"></div>
+    </aside>
+
+    <div class="mapa-wrap">
+      <div id="mapa"></div>
+      <div id="leyenda" aria-label="Leyenda"></div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

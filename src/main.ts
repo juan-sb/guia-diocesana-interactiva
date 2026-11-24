@@ -23,9 +23,11 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 //  - barrio: íconos y capillas
 //  - decanato elegido: sus parroquias y capillas, con los radios como líneas finas
 //  - parroquia elegida: su radio marcado y sus capillas resaltadas, con la línea
-const Z_ICONOS = 12.5
-const CAPILLAS_DESDE_ZOOM = 13
-const Z_OTROS_DECANATOS = 13
+// En la versión pública las parroquias y las capillas se ven con su ícono desde la vista de toda la diócesis (sin puntitos);
+// de lejos los íconos se achican para no taparse (mapa/capas.ts, icon-size).
+const Z_ICONOS = -1
+const CAPILLAS_DESDE_ZOOM = -1
+const Z_OTROS_DECANATOS = -1
 const Z_BARRIO = 14
 const DURACION = 600
 const CLAVE_COLEGIOS = 'guia-colegios'
@@ -56,7 +58,8 @@ setWorkerUrl(workerUrl)
 
 const esMovil = () => window.matchMedia('(max-width: 768px)').matches
 const tipoMarca = (l: Lugar): TipoMarca => (l.tipo === 'Capilla' ? 'capilla' : 'parroquia')
-const ctxVistas = (): CtxVistas => ({ datos, parroquias, porId, porIdCol, colegiosOn, ubic })
+const colegiosPorDecanato = new Map<string, Colegio[]>()
+const ctxVistas = (): CtxVistas => ({ datos, parroquias, porId, porIdCol, colegiosOn, ubic, colegiosDe: d => colegiosPorDecanato.get(d) ?? [] })
 const indiceDecanato = (d: string) => Math.max(0, datos.decanatos.indexOf(d))
 
 // ---------- marcadores ----------
@@ -343,6 +346,8 @@ async function iniciar() {
   await registrarIconos(mapa)
 
   zonas = crearZonas(mapa, datos.zonas, datos.radios, d => plural(parroquias.filter(p => p.decanato === d).length, 'parroquia', 'parroquias'))
+  // los colegios no traen decanato: es el de la zona en la que caen
+  for (const c of datos.colegios) { if (c.lat == null || c.lon == null) continue; const d = zonas.zonaEn(c.lon, c.lat); if (d) colegiosPorDecanato.set(d, [...(colegiosPorDecanato.get(d) ?? []), c]) }
   renderLeyenda(); eventos()
   if (esMovil()) panelEstado('medio')
   render()

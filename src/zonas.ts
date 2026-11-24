@@ -38,7 +38,8 @@ export function crearZonas(gl: MapaGL, zonas: Zona[], radios: Radio[], cuenta: (
     aplicarAspecto(gl, zonas, (z, i) => {
       const e = estiloZona(z.decanato, i)
       const activa = actual === z.decanato, apagada = !!actual && !activa
-      return { relleno: apagada ? 0.05 : activa ? Math.min(e.alpha + 0.12, 0.7) : e.alpha, aclara: !apagada, grosor: activa ? 4 : apagada ? 1.2 : 2.5, opacidad: apagada ? 0.45 : 0.95 }
+      // sutil: los decanatos son el fondo, lo importante son las parroquias
+      return { relleno: apagada ? 0.03 : activa ? e.alpha * 0.45 : e.alpha * 0.3, aclara: !apagada, grosor: activa ? 2.5 : apagada ? 0.8 : 1.4, opacidad: apagada ? 0.35 : 0.75 }
     })
     etiquetas()
   }

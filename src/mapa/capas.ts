@@ -33,20 +33,20 @@ export function capasDecanatos(zonas: Zona[], lim: Limites, radios: Radio[], dec
       { id: 'zonas_relleno', type: 'fill', source: 'zonas', paint: { 'fill-color': col((z, i) => estiloZona(z.decanato, i).base, '#cccccc'), 'fill-opacity': col((z, i) => estiloZona(z.decanato, i).alpha, 0.3) } },
       { id: 'radios_linea', type: 'line', source: 'radios', filter: NADA, layout: { 'line-join': 'round' }, paint: { 'line-color': '#1f2937', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.5, 14, 0.9, 17, 1.4], 'line-opacity': 0.6 } },
       { id: 'radio_sel_relleno', type: 'fill', source: 'radios', filter: NADA, paint: { 'fill-color': col((z, i) => estiloZona(z.decanato, i).base, '#cccccc'), 'fill-opacity': 0.3 } },
-      { id: 'mascara', type: 'fill', source: 'mascara', paint: { 'fill-color': '#0b2540', 'fill-opacity': 0.45 } },
+      { id: 'mascara', type: 'fill', source: 'mascara', paint: { 'fill-color': '#0b2540', 'fill-opacity': 0.25 } },
       { id: 'zonas_borde', type: 'line', source: 'zonas', layout: { 'line-join': 'round' }, paint: { 'line-color': col((z, i) => estiloZona(z.decanato, i).borde, '#666666'), 'line-width': 2.5, 'line-opacity': 0.95 } },
       { id: 'radio_sel_borde', type: 'line', source: 'radios', filter: NADA, layout: { 'line-join': 'round' }, paint: { 'line-color': col((z, i) => estiloZona(z.decanato, i).borde, '#333333'), 'line-width': 3.5, 'line-opacity': 1 } },
-      { id: 'contorno', type: 'line', source: 'contorno', layout: { 'line-join': 'round' }, paint: { 'line-color': '#0b2540', 'line-width': 3, 'line-opacity': 0.9 } },
+      { id: 'contorno', type: 'line', source: 'contorno', layout: { 'line-join': 'round' }, paint: { 'line-color': '#003c71', 'line-width': 1.8, 'line-opacity': 0.8 } },
       {
         // nombre del decanato y avance; de lejos (vista de la diócesis) el número es grande
         id: 'zonas_etq', type: 'symbol', source: 'zonas_etq',
         layout: {
-          'text-field': ['format', ['get', 'nombre'], { 'text-font': ['literal', ['Noto Sans Bold']] }, '\n', {}, ['get', 'num'], { 'text-font': ['literal', ['Noto Sans Bold']], 'font-scale': ['case', ['get', 'grande'], 1.15, 0.9] }],
+          'text-field': ['format', ['get', 'nombre'], { 'text-font': ['literal', ['Noto Sans Bold']] }, '\n', {}, ['get', 'num'], { 'text-font': ['literal', ['Noto Sans Regular']], 'font-scale': 0.85 }],
           'text-font': ['Noto Sans Bold'],
-          'text-size': ['step', ['zoom'], ['case', ['get', 'activa'], 15 * T, 14 * T], 12.5, ['case', ['get', 'activa'], 17 * T, 15 * T]],
+          'text-size': ['step', ['zoom'], ['case', ['get', 'activa'], 13 * T, 12 * T], 12.5, ['case', ['get', 'activa'], 14 * T, 13 * T]],
           'text-line-height': 1.15, 'text-max-width': 20, 'text-allow-overlap': true, 'text-ignore-placement': true,
         },
-        paint: { 'text-color': '#1e293b', 'text-halo-color': '#ffffff', 'text-halo-width': 2, 'text-halo-blur': 1, 'text-opacity': ['case', ['get', 'apagada'], 0.4, 1] },
+        paint: { 'text-color': '#003c71', 'text-halo-color': '#ffffff', 'text-halo-width': 2, 'text-halo-blur': 1, 'text-opacity': ['case', ['get', 'apagada'], 0.35, 0.8] },
       },
       { id: 'relaciones', type: 'line', source: 'relaciones', paint: { 'line-color': '#0f172a', 'line-width': 2, 'line-opacity': 0.55, 'line-dasharray': [2, 2.5] } },
       {
@@ -66,7 +66,7 @@ export function capasDecanatos(zonas: Zona[], lim: Limites, radios: Radio[], dec
         layout: {
           'icon-image': ['get', 'icono'],
           // de lejos los íconos se achican para no taparse; el elegido y los puntitos quedan de su tamaño
-          'icon-size': ['step', ['zoom'], ['case', ['get', 'fijo'], 1, 0.72], 12.5, ['case', ['get', 'fijo'], 1, 0.86], 14, 1],
+          'icon-size': ['step', ['zoom'], ['case', ['get', 'fijo'], 1, 0.62], 11.5, ['case', ['get', 'fijo'], 1, 0.74], 12.5, ['case', ['get', 'fijo'], 1, 0.88], 14, 1],
           'icon-allow-overlap': true, 'icon-ignore-placement': true, 'symbol-sort-key': ['get', 'orden'],
         },
         paint: { 'icon-opacity': ['get', 'opacidad'] },

@@ -10,6 +10,7 @@ export interface CtxVistas {
   porId: Map<string, Lugar>
   porIdCol: Map<string, Colegio>
   colegiosOn: boolean
+  colegiosDe: (decanato: string) => Colegio[] // colegios que caen en la zona del decanato
   ubic: [number, number] | null // "mi ubicación", si la dio
 }
 
@@ -57,12 +58,12 @@ const dist = (l: { lat: number | null; lon: number | null }, ctx: CtxVistas) => 
 export function vistaInicio(ctx: CtxVistas): string {
   const capillas = ctx.datos.lugares.filter(l => l.tipo === 'Capilla')
   const cards = ctx.datos.decanatos.map((d, i) => {
-    const ps = ctx.parroquias.filter(p => p.decanato === d), cs = capillas.filter(c => c.decanato === d)
+    const ps = ctx.parroquias.filter(p => p.decanato === d), cs = capillas.filter(c => c.decanato === d), col = ctx.colegiosDe(d)
     const e = estiloZona(d, i)
     return `<button type="button" class="deca-card" data-deca="${esc(d)}" style="--z:${rellenoZona(d, i)};--zb:${e.borde}">
       <span class="deca-nombre"><i></i>${esc(d)}</span>
       <span class="deca-num"><b>${plural(ps.length, 'parroquia', 'parroquias')}</b></span>
-      <small>${plural(cs.length, 'capilla', 'capillas')}</small></button>`
+      <small>${plural(cs.length, 'capilla', 'capillas')} · ${plural(col.length, 'colegio', 'colegios')}</small></button>`
   }).join('')
   return `<section class="avance-total">
       <p class="avance-txt"><b>${ctx.parroquias.length} parroquias</b> y ${capillas.length} capillas en ${ctx.datos.decanatos.length} decanatos</p>
@@ -82,6 +83,8 @@ const ICONO_CERCA = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
 
 export function vistaDecanato(ctx: CtxVistas, decanato: string, i = 0): string {
   const ps = ordenar(ctx.parroquias.filter(p => p.decanato === decanato), ctx)
+  const cs = ctx.datos.lugares.filter(l => l.tipo === 'Capilla' && l.decanato === decanato).length
+  const col = ordenar(ctx.colegiosDe(decanato), ctx)
   const e = estiloZona(decanato, i)
   return `<div class="deca-cab" style="--z:${rellenoZona(decanato, i)};--zb:${e.borde}">
       <button type="button" class="icono-btn" data-accion="todos" aria-label="Volver a todos los decanatos">←</button>
@@ -90,8 +93,10 @@ export function vistaDecanato(ctx: CtxVistas, decanato: string, i = 0): string {
       <button type="button" class="icono-btn" data-accion="buscar-abrir" aria-label="Buscar">${ICONO_BUSCAR}</button>
       <button type="button" class="icono-btn${ctx.ubic ? ' activo' : ''}" data-accion="cerca-aqui" aria-label="${ctx.ubic ? 'Ordenadas por cercanía' : 'Ordenar por cercanía'}" title="Ordenar por cercanía">${ICONO_CERCA}</button>
     </div>
-    <p class="avance-txt">${plural(ps.length, 'parroquia', 'parroquias')}${ctx.ubic ? ', de la más cercana a la más lejana' : ''}. Tocá una para ver sus datos y su radio.</p>
-    <ul class="items">${ps.map(l => item(l, { distancia: dist(l, ctx) })).join('')}</ul>`
+    <p class="avance-txt">${plural(ps.length, 'parroquia', 'parroquias')}, ${plural(cs, 'capilla', 'capillas')} y ${plural(col.length, 'colegio católico', 'colegios católicos')}${ctx.ubic ? ', de lo más cercano a lo más lejano' : ''}. Tocá una parroquia para ver sus datos y su radio.</p>
+    <h3 class="grupo">Parroquias (${ps.length})</h3>
+    <ul class="items">${ps.map(l => item(l, { distancia: dist(l, ctx) })).join('')}</ul>
+    ${col.length ? `<h3 class="grupo">Colegios católicos (${col.length})</h3><ul class="items">${col.map(c => item(c, { distancia: dist(c, ctx) })).join('')}</ul>` : ''}`
 }
 
 // ---- las más cercanas a mí (parroquias y capillas) ----

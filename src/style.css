@@ -345,3 +345,9 @@ h2 { font-weight: 700; }
   #top h1 { font-size: 16px; }
 }
 .buscador input:focus { outline-color: var(--oro); }
+/* decanatos sutiles: tarjetas blancas con una franja del color de la zona */
+.deca-card { background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--zb); }
+.deca-card:hover { background: color-mix(in srgb, var(--z) 30%, #fff); }
+.deca-nombre { color: var(--azul); }
+.deca-nombre i { display: none; }
+.deca-card small { color: var(--muted); }

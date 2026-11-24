@@ -39,7 +39,10 @@ export interface Colegio {
   lon: number | null
   revisar: boolean
   niveles: { nivel: string; nombre: string }[]
+  telefonos: string[]
+  emails: string[]
   propietario: string
+  notas_guia: string
   lugares_vinculados: string[]
   fuente: { nombre: string; url?: string; fecha: string }
 }

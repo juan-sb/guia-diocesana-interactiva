@@ -59,11 +59,14 @@ setWorkerUrl(workerUrl)
 const esMovil = () => window.matchMedia('(max-width: 768px)').matches
 const tipoMarca = (l: Lugar): TipoMarca => (l.tipo === 'Capilla' ? 'capilla' : 'parroquia')
 const colegiosPorDecanato = new Map<string, Colegio[]>()
+const decanatoDeColegio = new Map<string, string>() // los colegios no traen decanato: el de la zona en la que caen
 const ctxVistas = (): CtxVistas => ({ datos, parroquias, porId, porIdCol, colegiosOn, ubic, colegiosDe: d => colegiosPorDecanato.get(d) ?? [] })
 const indiceDecanato = (d: string) => Math.max(0, datos.decanatos.indexOf(d))
 
 // ---------- marcadores ----------
 function relacionados(): { madre: string | null; ids: Set<string> } {
+  const c = sel ? porIdCol.get(sel) : undefined
+  if (c) return { madre: null, ids: new Set(c.lugares_vinculados) } // un colegio: la parroquia o capilla de su mismo edificio
   const l = sel ? porId.get(sel) : undefined
   if (!l) return { madre: null, ids: new Set() }
   if (l.tipo === 'Capilla') return { madre: l.parroquia_id, ids: new Set(l.parroquia_id ? [l.parroquia_id] : []) }
@@ -74,7 +77,7 @@ function refrescarMarcadores() {
   if (!mapa) return
   const z = mapa.getZoom()
   const { madre, ids } = relacionados()
-  const selLugar = !!sel && porId.has(sel)
+  const hayElegido = !!sel && (porId.has(sel) || porIdCol.has(sel))
   const puntos: any[] = []
   const punto = (id: string, lat: number, lon: number, p: Record<string, unknown>) => puntos.push({ type: 'Feature', properties: { id, ...p }, geometry: { type: 'Point', coordinates: [lon, lat] } })
   for (const l of datos.lugares) {
@@ -86,7 +89,7 @@ function refrescarMarcadores() {
     const visible = !esCapilla || forzado || (decanatoSel ? enDecanato : z >= CAPILLAS_DESDE_ZOOM)
     if (!visible) continue
     const otro = !!decanatoSel && !enDecanato
-    const atenuado = (selLugar && !esSel && !esRel) || (!selLugar && otro)
+    const atenuado = (hayElegido && !esSel && !esRel) || (!hayElegido && otro)
     const comoPunto = !esCapilla && !forzado && (decanatoSel ? otro && z < Z_OTROS_DECANATOS : z < Z_ICONOS)
     punto(l.id, l.lat, l.lon, {
       icono: comoPunto ? clavePunto(0) : claveIcono({ tipo: tipoMarca(l), nivel: 0, sel: esSel, resaltado: esRel }),
@@ -97,7 +100,8 @@ function refrescarMarcadores() {
   for (const c of datos.colegios) {
     if (c.lat == null || c.lon == null) continue
     if (!colegiosOn && c.id !== sel) continue
-    const atenuado = selLugar || (!!decanatoSel && !sel)
+    // elegido algo: todo apagado menos lo elegido; con un decanato elegido, los colegios de los otros decanatos apagados
+    const atenuado = hayElegido ? c.id !== sel && !ids.has(c.id) : !!decanatoSel && decanatoDeColegio.get(c.id) !== decanatoSel
     const comoPunto = c.id !== sel && !decanatoSel && z < Z_ICONOS
     punto(c.id, c.lat, c.lon, {
       icono: comoPunto ? clavePunto(0, true) : claveIcono({ tipo: 'colegio', nivel: 0, sel: c.id === sel }),
@@ -195,7 +199,8 @@ function seleccionar(id: string) {
   const x = l ?? c; if (!x) return
   if (vista !== 'ficha') vistaPrevia = { centro: mapa.getCenter(), zoom: mapa.getZoom() }
   if (c && !colegiosOn) colegiosOn = true
-  if (l?.decanato) decanatoSel = l.decanato
+  const dec = l?.decanato || (c ? decanatoDeColegio.get(c.id) : undefined)
+  if (dec) decanatoSel = dec
   sel = id; vista = 'ficha'
   panelEstado('alto'); render()
   const radio = radioElegido()
@@ -347,7 +352,7 @@ async function iniciar() {
 
   zonas = crearZonas(mapa, datos.zonas, datos.radios, d => plural(parroquias.filter(p => p.decanato === d).length, 'parroquia', 'parroquias'))
   // los colegios no traen decanato: es el de la zona en la que caen
-  for (const c of datos.colegios) { if (c.lat == null || c.lon == null) continue; const d = zonas.zonaEn(c.lon, c.lat); if (d) colegiosPorDecanato.set(d, [...(colegiosPorDecanato.get(d) ?? []), c]) }
+  for (const c of datos.colegios) { if (c.lat == null || c.lon == null) continue; const d = zonas.zonaEn(c.lon, c.lat); if (d) { colegiosPorDecanato.set(d, [...(colegiosPorDecanato.get(d) ?? []), c]); decanatoDeColegio.set(c.id, d) } }
   renderLeyenda(); eventos()
   if (esMovil()) panelEstado('medio')
   render()

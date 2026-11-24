@@ -2,7 +2,7 @@
 import type { Colegio, Datos, Lugar } from './tipos'
 import { estiloZona, rellenoZona } from './estado'
 import { miniSvg, type TipoMarca } from './marcadores'
-import { distanciaKm, esc, esUrl, fechaNum, formatKm, norm, telHref } from './util'
+import { distanciaKm, esc, esUrl, fechaNum, formatKm, norm, telHref, waHref } from './util'
 
 export interface CtxVistas {
   datos: Datos
@@ -128,13 +128,17 @@ function cab(titulo: string, sub: string, extra = ''): string {
   return `<div class="ficha-cab"><button type="button" class="btn-icono" data-accion="cerrar" aria-label="Volver">←</button>
     <div><h2>${esc(titulo)}</h2><p class="sub">${sub}</p>${extra}</div></div>`
 }
-function acciones(tel: string | null, ig: { url: string; texto: string } | null, llegar: string | null, quien = ''): string {
+// Todo el contacto que publica la Guía, a mano: llamar (en el celular), WhatsApp, Instagram y, si no hay teléfono ni WhatsApp, el correo.
+interface Contacto { tel: string | null; wa: string | null; mail: string | null; ig: { url: string; texto: string } | null }
+function acciones({ tel, wa, mail, ig }: Contacto, llegar: string | null): string {
   const pares = [
-    tel ? `<a class="btn accion llamar" href="${telHref(tel)}"><b>Llamar${quien}</b><small>${esc(tel)}</small></a>` : '', // en el celular, botón
+    tel ? `<a class="btn accion llamar" href="${telHref(tel)}"><b>Llamar</b><small>${esc(tel)}</small></a>` : '', // en el celular, botón
+    wa ? `<a class="btn accion" href="${waHref(wa)}" target="_blank" rel="noopener noreferrer"><b>WhatsApp</b><small>${esc(wa)}</small></a>` : '',
+    !tel && !wa && mail ? `<a class="btn accion" href="mailto:${esc(mail)}"><b>Correo</b><small>${esc(mail)}</small></a>` : '',
     ig ? `<a class="btn accion" href="${esc(ig.url)}" target="_blank" rel="noopener noreferrer"><b>Instagram</b><small>${esc(ig.texto)}</small></a>` : '',
   ].filter(Boolean)
   // en escritorio no hay a dónde llamar: se muestra el número, copiable
-  const numero = tel ? `<div class="tel-escritorio"><span class="det">Teléfono${esc(quien)}</span><span class="num">${esc(tel)}</span><button type="button" class="btn chico" data-copiar="${esc(tel)}">Copiar</button></div>` : ''
+  const numero = tel ? `<div class="tel-escritorio"><span class="det">Teléfono</span><span class="num">${esc(tel)}</span><button type="button" class="btn chico" data-copiar="${esc(tel)}">Copiar</button></div>` : ''
   return `<div class="acciones-ficha">${numero}${pares.length ? `<div class="par-acciones${pares.length === 1 ? ' uno' : ''}">${pares.join('')}</div>` : ''}
     ${llegar ? `<a class="btn primario grande" href="${esc(llegar)}" target="_blank" rel="noopener noreferrer">Ver en Google Maps</a>` : '<span class="btn deshabilitado grande">Ver en Google Maps (no tenemos la dirección)</span>'}</div>`
 }
@@ -147,7 +151,6 @@ export function fichaLugar(l: Lugar, ctx: CtxVistas, chip: string): string {
   const capillas = l.capillas.map(id => ctx.porId.get(id)).filter((x): x is Lugar => !!x)
   const colegios = l.colegios_vinculados.map(id => ctx.porIdCol.get(id)).filter((x): x is Colegio => !!x)
   const tels = l.telefonos.length ? l.telefonos : base.telefonos
-  const quien = madre && !l.telefonos.length && tels.length ? ' a la parroquia' : ''
   const erec = l.ereccion.match(/(\d{4})/)?.[1]
   const redes = [
     l.web ? (esUrl(l.web) ? link(l.web, 'Sitio web') : esc(l.web)) : '',
@@ -156,7 +159,7 @@ export function fichaLugar(l: Lugar, ctx: CtxVistas, chip: string): string {
     l.youtube ? (esUrl(l.youtube) ? link(l.youtube, 'YouTube') : `YouTube: ${esc(l.youtube)}`) : '',
   ].filter(Boolean).join('<br>')
   return `${cab(l.nombre, `${esc(l.tipo)} · ${esc(l.localidad || l.localidad_guia)}`, chip)}
-  ${acciones(tels[0] ?? null, instagram(base.instagram), urlMaps(l), quien)}
+  ${acciones({ tel: tels[0] ?? null, wa: (l.whatsapp.length ? l.whatsapp : base.whatsapp)[0] ?? null, mail: (l.emails.length ? l.emails : base.emails)[0] ?? null, ig: instagram(l.instagram || base.instagram) }, urlMaps(l))}
   ${madre ? `<p>Capilla de la parroquia <a href="#" data-accion="ir" data-id="${madre.id}">${esc(madre.nombre)}</a>.</p>` : ''}
   <section><h3>Datos</h3>
     <dl class="datos">
@@ -178,12 +181,15 @@ export function fichaColegio(c: Colegio, ctx: CtxVistas): string {
   const niveles = [...new Set(c.niveles.map(n => n.nivel))].join(', ')
   const fuente = c.fuente.url && esUrl(c.fuente.url) ? link(c.fuente.url, c.fuente.nombre) : esc(c.fuente.nombre)
   return `${cab(c.nombre, `Colegio católico${c.localidad ? ' · ' + esc(c.localidad) : ''}${niveles ? ' · ' + esc(niveles) : ''}`)}
-  ${acciones(null, null, urlMaps(c))}
+  ${acciones({ tel: c.telefonos[0] ?? null, wa: null, mail: c.emails[0] ?? null, ig: null }, urlMaps(c))}
   <section><h3>Datos</h3>
     <dl class="datos">
       ${fila('Dirección', c.direccion ? `${esc(c.direccion)}${c.localidad ? ', ' + esc(c.localidad) : ''}` : '')}
       ${fila('Niveles', c.niveles.map(n => `${esc(n.nivel)}: ${esc(n.nombre)}`).join('<br>'))}
+      ${fila('Teléfonos', c.telefonos.map(t => `<a href="${telHref(t)}">${esc(t)}</a>`).join('<br>'))}
+      ${fila('Correo', c.emails.map(m => `<a href="mailto:${esc(m)}">${esc(m)}</a>`).join('<br>'))}
       ${fila('Propietario', esc(c.propietario))}
+      ${fila('Notas', esc(c.notas_guia))}
       ${fila('Ubicación', esc(ubicacionTexto(c)))}
       ${fila('Fuente', `${fuente} <span class="det">(${fechaNum(c.fuente.fecha)})</span>`)}
     </dl></section>

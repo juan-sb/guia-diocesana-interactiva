@@ -428,3 +428,32 @@ h2 { font-weight: 700; }
   .ficha-cab { gap: 4px; }
   .ficha-cab .btn-icono { width: 40px; height: 40px; border: 0; margin-left: -8px; color: var(--azul); }
 }
+
+/* ---- "hay más abajo": el final se desvanece y aparece una flechita (hoja.ts) ---- */
+@media (min-width: 769px) { #panel { position: relative; } } /* en el celular ya es fixed */
+.hay-mas {
+  position: absolute; left: 0; right: 0; bottom: env(safe-area-inset-bottom); z-index: 2; height: 44px; padding: 0 0 6px;
+  display: flex; align-items: flex-end; justify-content: center; border: 0; cursor: pointer;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 80%);
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+#panel.con-mas .hay-mas { opacity: 1; }
+.hay-mas span {
+  display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 24px; border-radius: 999px;
+  background: #fff; border: 1px solid var(--line); color: var(--azul); box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+}
+#panel.con-mas .hay-mas span { pointer-events: auto; animation: asomar 1.6s ease-in-out 2; }
+@keyframes asomar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) { #panel.con-mas .hay-mas span { animation: none; } }
+/* ya scrolleado: una sombra bajo la manija (o el buscador) marca que hay contenido arriba */
+#handle, .buscador { position: relative; z-index: 1; background: var(--panel); }
+#panel.scrolleado #contenido { box-shadow: inset 0 7px 6px -6px rgba(15, 23, 42, 0.16); }
+
+/* ---- inicio: la leyenda y el interruptor de colegios siempre en un renglón ---- */
+.tipos { flex-wrap: nowrap; justify-content: space-between; gap: 6px; font-size: min(14px, 3.55vw); }
+.tipo { gap: 4px; }
+.tipos svg { width: min(22px, 5vw); height: min(22px, 5vw); }
+.conmuta { flex: none; gap: 4px; padding: 2px 6px 2px 3px; font-size: inherit; }
+.conmuta .sw { width: 24px; height: 14px; }
+.conmuta .sw::after { width: 10px; height: 10px; }
+.conmuta[aria-pressed="true"] .sw::after { transform: translateX(10px); }

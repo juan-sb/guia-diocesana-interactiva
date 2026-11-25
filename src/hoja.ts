@@ -20,6 +20,7 @@ export interface Hoja {
   altura(e?: PanelEstado): number // px que tapa la hoja en ese estado (0 en escritorio)
   medirMini(): void // recalcula la altura mini (cambia según la vista)
   fijarMedio(px: number | null): void // altura de "medio" para esta vista (null: la de siempre)
+  revisarMas(): void // vuelve a mirar si queda contenido abajo (después de cambiar la vista)
 }
 
 export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HTMLElement, buscador: HTMLElement,
@@ -175,5 +176,25 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
   const medirTecho = () => panel.style.setProperty('--techo', `${techo.offsetHeight + AIRE_ARRIBA}px`)
   medirTecho()
   window.addEventListener('resize', () => { medirTecho(); medirMini() })
-  return { estado: () => actual, poner, altura, medirMini, fijarMedio }
+  // ---- "hay más abajo" ----
+  // Si el contenido sigue más abajo de lo que se ve, el final se desvanece y aparece una flechita:
+  // tocarla abre la hoja entera (o, si ya está entera, baja un tramo). Arriba, una sombra cuando ya se scrolleó.
+  const mas = document.createElement('button')
+  mas.type = 'button'; mas.className = 'hay-mas'; mas.setAttribute('aria-label', 'Ver más')
+  mas.innerHTML = '<span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>'
+  panel.appendChild(mas)
+  function revisarMas() {
+    const queda = contenido.scrollHeight - contenido.scrollTop - contenido.clientHeight
+    panel.classList.toggle('con-mas', queda > 12 && !(esMovil() && actual === 'mini'))
+    panel.classList.toggle('scrolleado', contenido.scrollTop > 2)
+  }
+  mas.addEventListener('click', () => {
+    if (esMovil() && actual !== 'alto') poner('alto')
+    else contenido.scrollBy({ top: Math.round(contenido.clientHeight * 0.7), behavior: 'smooth' })
+  })
+  contenido.addEventListener('scroll', revisarMas, { passive: true })
+  new ResizeObserver(revisarMas).observe(contenido) // cambia de alto con la hoja
+  panel.addEventListener('transitionend', revisarMas)
+
+  return { estado: () => actual, poner: (e: PanelEstado) => { poner(e); revisarMas() }, altura, medirMini, fijarMedio, revisarMas }
 }

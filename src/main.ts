@@ -163,6 +163,7 @@ function render() {
   zonas.actualizar(decanatoSel, radioElegido())
   hoja.medirMini()
   hoja.fijarMedio(vista === 'ficha' ? altoFicha() : vista === 'inicio' ? altoHasta($('contenido').lastElementChild) : null)
+  hoja.revisarMas()
   refrescarMarcadores()
   sincronizarHistoria()
 }
@@ -210,7 +211,7 @@ function cerrarBusqueda() {
 // en una ficha, la hoja a media altura muestra hasta los botones de contacto y el de Google Maps
 // (en el inicio, hasta el final: así queda más mapa a la vista)
 const altoHasta = (fin: Element | null) => (fin ? fin.getBoundingClientRect().bottom - $('panel').getBoundingClientRect().top + 14 : null)
-const altoFicha = () => altoHasta($('contenido').querySelector('.acciones-ficha'))
+const altoFicha = () => { const h = altoHasta($('contenido').querySelector('.acciones-ficha')); return h == null ? null : h + 22 }
 
 function verTodo() {
   cerrarMenu()

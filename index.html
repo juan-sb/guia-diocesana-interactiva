@@ -16,19 +16,22 @@
       <h1>Mapa de parroquias <span>Guía diocesana</span></h1>
       <a class="volver-guia" href="https://avellanedalanus.org.ar/guia-diocesana/" target="_top">← <span class="largo">Volver a la </span>Guía</a>
       <div class="cab-acciones">
+        <button id="btn-buscar" class="btn-cab btn-ico" type="button" aria-label="Buscar parroquia, calle o localidad"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></button>
         <button id="btn-todo" class="btn-cab" type="button">Ver todo</button>
         <button id="btn-mas" class="btn-cab btn-mas" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-mas" aria-label="Más opciones">⋯</button>
       </div>
     </header>
 
     <div id="menu-mas" role="menu" hidden>
+      <button type="button" role="menuitem" data-menu="todo" class="solo-movil">Ver toda la diócesis</button>
       <button type="button" role="menuitem" data-menu="colegios" id="menu-colegios">Mostrar colegios en el mapa</button>
       <button type="button" role="menuitem" data-menu="acerca">Acerca de este mapa</button>
     </div>
 
     <aside id="panel" class="medio">
       <button id="handle" type="button" aria-label="Abrir o cerrar el panel"><span></span></button>
-      <div class="buscador">
+      <div class="buscador" id="buscador">
+        <button id="buscar-cerrar" class="buscar-cerrar" type="button" aria-label="Cerrar la búsqueda">←</button>
         <input id="q" type="search" placeholder="Buscar parroquia, calle o localidad" autocomplete="off" enterkeyhint="search" aria-label="Buscar parroquia, calle o localidad" />
       </div>
       <div id="contenido" class="vista"></div>

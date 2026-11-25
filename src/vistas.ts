@@ -65,19 +65,18 @@ export function vistaInicio(ctx: CtxVistas): string {
       <span class="deca-num"><b>${plural(ps.length, 'parroquia', 'parroquias')}</b></span>
       <small>${plural(cs.length, 'capilla', 'capillas')} · ${plural(col.length, 'colegio', 'colegios')}</small></button>`
   }).join('')
-  return `<section class="avance-total">
-      <p class="avance-txt"><b>${ctx.parroquias.length} parroquias</b> y ${capillas.length} capillas en ${ctx.datos.decanatos.length} decanatos</p>
-    </section>
+  // la fila de arriba es a la vez la leyenda del mapa y el resumen; los colegios se prenden y apagan desde ahí
+  const ico = (t: TipoMarca) => miniSvg({ tipo: t, nivel: 0 }, 22)
+  return `<div class="tipos">
+      <span class="tipo">${ico('parroquia')}<span><b>${ctx.parroquias.length}</b> parroquias</span></span>
+      <span class="tipo">${ico('capilla')}<span><b>${capillas.length}</b> capillas</span></span>
+      <button type="button" class="tipo conmuta" data-accion="colegios" aria-pressed="${ctx.colegiosOn}" title="${ctx.colegiosOn ? 'Ocultar' : 'Mostrar'} los colegios en el mapa">${ico('colegio')}<span><b>${ctx.datos.colegios.length}</b> colegios</span><i class="sw" aria-hidden="true"></i></button>
+    </div>
     <div class="deca-cards">${cards}</div>
-    <button type="button" class="btn grande" data-accion="cerca">Las más cercanas a mí</button>
-    <div class="colegios-linea">
-      <span><b>Colegios católicos:</b> ${ctx.datos.colegios.length}</span>
-      <label class="interruptor"><input type="checkbox" id="chk-colegios" ${ctx.colegiosOn ? 'checked' : ''}> Mostrarlos en el mapa</label>
-    </div>`
+    <button type="button" class="btn grande cerca" data-accion="cerca">${ICONO_CERCA}Las más cercanas a mí</button>`
 }
 
 // ---- un decanato: sus parroquias ----
-const ICONO_BUSCAR = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>'
 const ICONO_CERCA = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>'
 
 export function vistaDecanato(ctx: CtxVistas, decanato: string, i = 0): string {
@@ -88,11 +87,9 @@ export function vistaDecanato(ctx: CtxVistas, decanato: string, i = 0): string {
   return `<div class="deca-cab" style="--z:${rellenoZona(decanato, i)};--zb:${e.borde}">
       <button type="button" class="icono-btn" data-accion="todos" aria-label="Volver a todos los decanatos">←</button>
       <i class="deca-chip"></i><h2>${esc(decanato)}</h2>
-      <span class="deca-contador"><b>${ps.length}</b></span>
-      <button type="button" class="icono-btn" data-accion="buscar-abrir" aria-label="Buscar">${ICONO_BUSCAR}</button>
-      <button type="button" class="icono-btn${ctx.ubic ? ' activo' : ''}" data-accion="cerca-aqui" aria-label="${ctx.ubic ? 'Ordenadas por cercanía' : 'Ordenar por cercanía'}" title="Ordenar por cercanía">${ICONO_CERCA}</button>
+      <button type="button" class="btn-cerca-aqui${ctx.ubic ? ' activo' : ''}" data-accion="cerca-aqui" aria-pressed="${!!ctx.ubic}" title="Ordenar por cercanía">${ICONO_CERCA}<span>Cerca de mí</span></button>
     </div>
-    <p class="avance-txt">${plural(ps.length, 'parroquia', 'parroquias')}, ${plural(cs, 'capilla', 'capillas')} y ${plural(col.length, 'colegio católico', 'colegios católicos')}${ctx.ubic ? ', de lo más cercano a lo más lejano' : ''}. Tocá una parroquia para ver sus datos y su radio.</p>
+    <p class="deca-resumen">${plural(ps.length, 'parroquia', 'parroquias')} · ${plural(cs, 'capilla', 'capillas')} · ${plural(col.length, 'colegio', 'colegios')}${ctx.ubic ? ' · <b>por cercanía</b>' : ''}</p>
     <h3 class="grupo">Parroquias (${ps.length})</h3>
     <ul class="items">${ps.map(l => item(l, { distancia: dist(l, ctx) })).join('')}</ul>
     ${col.length ? `<h3 class="grupo">Colegios católicos (${col.length})</h3><ul class="items">${col.map(c => item(c, { distancia: dist(c, ctx) })).join('')}</ul>` : ''}`
@@ -110,6 +107,14 @@ export function vistaCercanas(ctx: CtxVistas, decanato: string | null, estado: '
 
 // ---- búsqueda: parroquias, capillas y (si están a la vista) colegios ----
 export function vistaBuscar(ctx: CtxVistas, q: string): string {
+  if (!q.trim()) {
+    const cuenta = new Map<string, number>()
+    for (const l of ctx.datos.lugares) { const loc = l.localidad || l.localidad_guia; if (loc) cuenta.set(loc, (cuenta.get(loc) ?? 0) + 1) }
+    const locs = [...cuenta.keys()].sort((a, b) => a.localeCompare(b, 'es'))
+    return `<p class="vacio">Escribí el nombre de una parroquia o capilla, una calle o una localidad.</p>
+      <h3 class="grupo">Por localidad</h3>
+      <div class="chips-loc">${locs.map(l => `<button type="button" class="chip-loc" data-accion="buscar-en" data-q="${esc(l)}">${esc(l)}</button>`).join('')}</div>`
+  }
   const ts = norm(q).split(/\s+/).filter(Boolean)
   const ok = (texto: string) => ts.every(t => norm(texto).includes(t))
   const ps = ctx.datos.lugares.filter(l => l.tipo !== 'Capilla' && ok(`${l.nombre} ${l.localidad} ${l.localidad_guia} ${l.direccion}`)).sort(porNombre)
@@ -123,10 +128,11 @@ export function vistaBuscar(ctx: CtxVistas, q: string): string {
 }
 
 // ---- fichas ----
-function cab(titulo: string, sub: string, extra = ''): string {
+function cab(titulo: string, sub: string, extra = '', dir = ''): string {
   return `<div class="ficha-cab"><button type="button" class="btn-icono" data-accion="cerrar" aria-label="Volver">←</button>
-    <div><h2>${esc(titulo)}</h2><p class="sub">${sub}${extra ? ` ${extra}` : ''}</p></div></div>`
+    <div><h2>${esc(titulo)}</h2><p class="sub">${sub}${extra ? ` ${extra}` : ''}</p>${dir ? `<p class="dir">${dir}</p>` : ''}</div></div>`
 }
+const sinDir = (d: string) => !d || /^(s\/d|sin sede central)$/i.test(d)
 // Todo el contacto que publica la Guía, a mano: llamar (en el celular), WhatsApp, Instagram y, si no hay teléfono ni WhatsApp, el correo.
 interface Contacto { tel: string | null; wa: string | null; mail: string | null; ig: { url: string; texto: string } | null }
 function acciones({ tel, wa, mail, ig }: Contacto, llegar: string | null): string {
@@ -157,12 +163,13 @@ export function fichaLugar(l: Lugar, ctx: CtxVistas, chip: string): string {
     l.instagram ? (esUrl(l.instagram) ? link(l.instagram, 'Instagram') : `Instagram: ${esc(l.instagram)}`) : '',
     l.youtube ? (esUrl(l.youtube) ? link(l.youtube, 'YouTube') : `YouTube: ${esc(l.youtube)}`) : '',
   ].filter(Boolean).join('<br>')
-  return `${cab(l.nombre, `${esc(l.tipo)} · ${esc(l.localidad || l.localidad_guia)}`, chip)}
+  const dir = sinDir(l.direccion) ? '' : `${esc(l.direccion)}${l.cp ? ` <span class="det">(CP ${esc(l.cp)})</span>` : ''}`
+  return `${cab(l.nombre, `${esc(l.tipo)} · ${esc(l.localidad || l.localidad_guia)}`, chip, dir)}
   ${acciones({ tel: tels[0] ?? null, wa: (l.whatsapp.length ? l.whatsapp : base.whatsapp)[0] ?? null, mail: (l.emails.length ? l.emails : base.emails)[0] ?? null, ig: instagram(l.instagram || base.instagram) }, urlMaps(l))}
   ${madre ? `<p>Capilla de la parroquia <a href="#" data-accion="ir" data-id="${madre.id}">${esc(madre.nombre)}</a>.</p>` : ''}
   <section><h3>Datos</h3>
     <dl class="datos">
-      ${fila('Dirección', `${esc(l.direccion)}${l.localidad ? `, ${esc(l.localidad)}` : ''}${l.cp ? ` (CP ${esc(l.cp)})` : ''}`)}
+      ${dir ? '' : fila('Dirección', esc(l.direccion))}
       ${fila('Teléfonos', l.telefonos.map(t => `<a href="${telHref(t)}">${esc(t)}</a>`).join('<br>'))}
       ${fila('WhatsApp', l.whatsapp.map(esc).join('<br>'))}
       ${fila('Correo', l.emails.map(m => `<a href="mailto:${esc(m)}">${esc(m)}</a>`).join('<br>'))}
@@ -179,11 +186,10 @@ export function fichaColegio(c: Colegio, ctx: CtxVistas): string {
   const lugares = c.lugares_vinculados.map(id => ctx.porId.get(id)).filter((x): x is Lugar => !!x)
   const niveles = [...new Set(c.niveles.map(n => n.nivel))].join(', ')
   const fuente = c.fuente.url && esUrl(c.fuente.url) ? link(c.fuente.url, c.fuente.nombre) : esc(c.fuente.nombre)
-  return `${cab(c.nombre, `Colegio católico${c.localidad ? ' · ' + esc(c.localidad) : ''}${niveles ? ' · ' + esc(niveles) : ''}`)}
+  return `${cab(c.nombre, `Colegio católico${c.localidad ? ' · ' + esc(c.localidad) : ''}${niveles ? ' · ' + esc(niveles) : ''}`, '', sinDir(c.direccion) ? '' : esc(c.direccion))}
   ${acciones({ tel: c.telefonos[0] ?? null, wa: null, mail: c.emails[0] ?? null, ig: null }, urlMaps(c))}
   <section><h3>Datos</h3>
     <dl class="datos">
-      ${fila('Dirección', c.direccion ? `${esc(c.direccion)}${c.localidad ? ', ' + esc(c.localidad) : ''}` : '')}
       ${fila('Niveles', c.niveles.map(n => `${esc(n.nivel)}: ${esc(n.nombre)}`).join('<br>'))}
       ${fila('Teléfonos', c.telefonos.map(t => `<a href="${telHref(t)}">${esc(t)}</a>`).join('<br>'))}
       ${fila('Correo', c.emails.map(m => `<a href="mailto:${esc(m)}">${esc(m)}</a>`).join('<br>'))}

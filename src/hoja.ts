@@ -1,7 +1,7 @@
 // Hoja inferior del celular (el panel): se arrastra con el dedo y se acomoda en tres alturas.
 //  - mini: solo la manija y el buscador (o la cabecera del decanato)
 //  - medio: la lista; en una ficha, solo lo justo (nombre y botones de contacto), así se ve el mapa
-//  - alto: todo, con el mapa arriba
+//  - alto: casi toda la pantalla (hasta la barra de arriba), para leer listas largas o la ficha entera
 // Se arrastra desde la manija, el buscador o el contenido: hacia arriba la abre mientras no esté en "alto";
 // hacia abajo la cierra cuando el contenido ya está scrolleado arriba del todo (como Google Maps).
 // Al soltar, va a la altura más cercana a donde la habría llevado el envión.
@@ -9,8 +9,8 @@
 
 export type PanelEstado = 'mini' | 'medio' | 'alto'
 const ORDEN: PanelEstado[] = ['mini', 'medio', 'alto']
-const PROPORCION: Record<'medio' | 'alto', number> = { medio: 0.46, alto: 0.62 }
-const MAX_ARRASTRE = 0.9 // hasta dónde se deja estirar (proporción de la pantalla), con resistencia pasando "alto"
+const PROPORCION_MEDIO = 0.46
+const AIRE_ARRIBA = 8 // px entre la barra de arriba y la hoja en "alto"
 const UMBRAL = 6 // px que tiene que moverse el dedo antes de decidir si arrastra la hoja o scrollea
 const ENVION_MS = 180 // cuánto "proyecta" la velocidad al soltar
 
@@ -23,16 +23,17 @@ export interface Hoja {
 }
 
 export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HTMLElement, buscador: HTMLElement,
-  esMovil: () => boolean, alCambiar: (e: PanelEstado) => void = () => {}): Hoja {
+  techo: HTMLElement, esMovil: () => boolean, alCambiar: (e: PanelEstado) => void = () => {}): Hoja {
   let actual: PanelEstado = 'medio'
   let mini = 84
   let medio: number | null = null
 
+  const altoMax = () => window.innerHeight - techo.offsetHeight - AIRE_ARRIBA
   const altura = (e: PanelEstado = actual) =>
-    !esMovil() ? 0 : e === 'mini' ? mini : e === 'medio' && medio ? medio : Math.round(window.innerHeight * PROPORCION[e])
+    !esMovil() ? 0 : e === 'mini' ? mini : e === 'alto' ? altoMax() : medio ?? Math.round(window.innerHeight * PROPORCION_MEDIO)
 
   function fijarMedio(px: number | null) {
-    medio = px && esMovil() ? Math.round(Math.min(px, window.innerHeight * PROPORCION.medio)) : null
+    medio = px && esMovil() ? Math.round(Math.min(px, window.innerHeight * PROPORCION_MEDIO)) : null
     if (medio) panel.style.setProperty('--medio', `${medio}px`)
     else panel.style.removeProperty('--medio')
   }
@@ -62,9 +63,9 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
   let muestras: [number, number][] = []
 
   const limitar = (h: number) => {
-    const min = mini, max = altura('alto'), tope = window.innerHeight * MAX_ARRASTRE
+    const min = mini, max = altoMax()
     if (h < min) return min - (min - h) * 0.25
-    if (h > max) return Math.min(tope, max + (h - max) * 0.35)
+    if (h > max) return Math.min(max + 24, max + (h - max) * 0.25)
     return h
   }
 
@@ -171,6 +172,8 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
     poner('medio')
   })
 
-  window.addEventListener('resize', () => medirMini())
+  const medirTecho = () => panel.style.setProperty('--techo', `${techo.offsetHeight + AIRE_ARRIBA}px`)
+  medirTecho()
+  window.addEventListener('resize', () => { medirTecho(); medirMini() })
   return { estado: () => actual, poner, altura, medirMini, fijarMedio }
 }

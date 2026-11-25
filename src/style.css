@@ -251,7 +251,7 @@ code { font: 12px ui-monospace, Consolas, monospace; background: #f1f5f9; paddin
   }
   #panel.arrastrando { transition: none; user-select: none; }
   #panel.medio { height: calc(var(--medio, 46dvh) + env(safe-area-inset-bottom)); }
-  #panel.alto { height: 62dvh; }
+  #panel.alto { height: calc(100dvh - var(--techo, 64px)); } /* hasta la barra de arriba (hoja.ts pone --techo) */
   #panel.mini { height: calc(var(--mini, 84px) + env(safe-area-inset-bottom)); }
   #panel.mini .vista { overflow: hidden; }
   #panel.mini #contenido { cursor: pointer; }
@@ -368,3 +368,63 @@ h2 { font-weight: 700; }
 .deca-nombre { color: var(--azul); }
 .deca-nombre i { display: none; }
 .deca-card small { color: var(--muted); }
+
+/* ================================================================
+   Celular: usabilidad. La lupa arriba abre la búsqueda (la hoja sube entera con el buscador);
+   el mapa se maneja con los dedos, sin botones de zoom ni leyenda flotante (la leyenda está en el inicio).
+   ================================================================ */
+#btn-buscar { display: none; }
+.btn-ico { width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+#menu-mas .solo-movil { display: none; }
+.buscar-cerrar { display: none; }
+
+/* inicio: la leyenda con los números; los colegios se prenden y apagan ahí mismo */
+.tipos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 4px 0 10px; font-size: 14px; }
+.tipo { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.tipo svg { flex: none; display: block; }
+.tipo b { color: var(--azul); font-weight: 700; }
+.conmuta { min-height: 36px; padding: 2px 8px 2px 4px; border: 1px solid var(--line); border-radius: 999px; background: #fff; cursor: pointer; font-size: 14px; }
+.conmuta[aria-pressed="false"] svg { opacity: 0.45; }
+.conmuta .sw { flex: none; width: 28px; height: 16px; border-radius: 999px; background: #cbd5e1; position: relative; transition: background 0.2s; }
+.conmuta .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+.conmuta[aria-pressed="true"] .sw { background: var(--azul); }
+.conmuta[aria-pressed="true"] .sw::after { transform: translateX(12px); }
+.btn.grande.cerca { min-height: 46px; }
+.btn.cerca svg { flex: none; }
+
+.deca-resumen { font-size: 14px; color: var(--muted); margin: -6px 0 2px; }
+.deca-resumen b { color: var(--azul); font-weight: 600; }
+.dir { font-size: 14.5px; margin-top: 2px; }
+.chips-loc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.chip-loc { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 14px; color: var(--azul); cursor: pointer; }
+.chip-loc:hover { border-color: var(--azul); }
+/* botones de contacto: el detalle en un renglón (un @usuario largo no rompe el botón) */
+.btn.accion { min-width: 0; }
+.btn.accion small { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+
+@media (max-width: 768px) {
+  #btn-buscar { display: inline-flex; }
+  #btn-todo { display: none; }
+  #menu-mas .solo-movil { display: block; }
+  .buscador { display: none; }
+  #panel.buscando .buscador { display: flex; gap: 6px; align-items: center; padding: 0 14px 6px 6px; }
+  #panel.buscando .buscador input { flex: 1; min-width: 0; }
+  .buscar-cerrar { display: inline-flex; flex: none; width: 44px; height: 44px; align-items: center; justify-content: center; border: 0; background: none; font-size: 22px; color: var(--azul); cursor: pointer; }
+  .maplibregl-ctrl-top-right { display: none; }
+  #leyenda { display: none; }
+}
+/* decanato: "Cerca de mí" con texto, no solo el ícono */
+.btn-cerca-aqui { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 10px 0 6px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--azul); font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.btn-cerca-aqui svg { width: 18px; height: 18px; }
+.btn-cerca-aqui.activo { background: var(--azul); border-color: var(--azul); color: #fff; }
+/* ficha: el decanato como texto con su color, sin pastilla (no ocupa otro renglón) */
+.sub .chip-zona { margin: 0; padding: 0; background: none; font-size: inherit; font-weight: 400; color: inherit; vertical-align: baseline; gap: 4px; white-space: nowrap; }
+.sub .chip-zona::before { content: '·'; margin-right: 1px; }
+.sub .chip-zona i { width: 10px; height: 10px; border-radius: 2px; border-width: 1.5px; }
+@media (max-width: 768px) {
+  .tipos { gap: 4px 10px; font-size: 13.5px; }
+  .tipos svg { width: 20px; height: 20px; }
+  .conmuta { padding: 2px 6px 2px 3px; gap: 4px; min-height: 34px; }
+  .ficha-cab { gap: 4px; }
+  .ficha-cab .btn-icono { width: 40px; height: 40px; border: 0; margin-left: -8px; color: var(--azul); }
+}

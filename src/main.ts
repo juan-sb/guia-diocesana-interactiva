@@ -47,7 +47,6 @@ let ubic: [number, number] | null = null
 let estadoUbic: 'pidiendo' | 'error' | 'ok' = 'ok'
 let mensajeUbic = ''
 let vistaPrevia: { centro: LngLatLike; zoom: number } | null = null
-let buscadorAbierto = false
 
 let zonas: ControlZonas
 let limites: Limites
@@ -128,7 +127,7 @@ const panelEstado = (e: PanelEstado) => hoja.poner(e)
 const panelActual = (): PanelEstado => hoja.estado()
 const altoHoja = (e: PanelEstado = panelActual()) => hoja.altura(e)
 function areaLibre(e: PanelEstado): { arriba: number; abajo: number } {
-  if (esMovil()) return { arriba: 56, abajo: altoHoja(e) }
+  if (esMovil()) return { arriba: 0, abajo: altoHoja(e) } // en el celular no hay leyenda ni botones de zoom arriba
   const ley = $('leyenda').getBoundingClientRect(), mp = $('mapa').getBoundingClientRect()
   return { arriba: Math.max(0, Math.round(ley.bottom - mp.top)), abajo: 0 }
 }
@@ -149,6 +148,7 @@ function render() {
   const cont = $('contenido')
   const ctx = ctxVistas()
   $('panel').classList.toggle('en-ficha', vista === 'ficha')
+  $('panel').classList.toggle('buscando', vista === 'buscar') // en el celular el buscador aparece solo al buscar
   if (vista === 'inicio') cont.innerHTML = vistaInicio(ctx)
   else if (vista === 'decanato' && decanatoSel) cont.innerHTML = vistaDecanato(ctx, decanatoSel, indiceDecanato(decanatoSel))
   else if (vista === 'cercanas') cont.innerHTML = vistaCercanas(ctx, decanatoSel, estadoUbic, mensajeUbic)
@@ -161,19 +161,56 @@ function render() {
   cont.scrollTop = 0
   $('menu-colegios').textContent = colegiosOn ? 'Ocultar los colegios del mapa' : 'Mostrar colegios en el mapa'
   zonas.actualizar(decanatoSel, radioElegido())
-  // en el celular, la ficha no lleva el buscador arriba (tiene su flecha para volver)
-  $('panel').classList.toggle('buscador-oculto', (vista === 'decanato' && !buscadorAbierto) || vista === 'ficha')
-  if (vista !== 'decanato') buscadorAbierto = false
   hoja.medirMini()
-  hoja.fijarMedio(vista === 'ficha' ? altoFicha() : null)
+  hoja.fijarMedio(vista === 'ficha' ? altoFicha() : vista === 'inicio' ? altoHasta($('contenido').lastElementChild) : null)
   refrescarMarcadores()
+  sincronizarHistoria()
+}
+
+// ---------- botón "atrás" del teléfono ----------
+// Fuera del inicio hay siempre una entrada de más en el historial: el "atrás" del teléfono (o del navegador)
+// vuelve un paso dentro del mapa en vez de salir de la página. Al volver al inicio por los botones, se consume.
+let trampa = false, ignorarPop = false
+function sincronizarHistoria() {
+  const fuera = vista !== 'inicio'
+  if (fuera && !trampa) { history.pushState({ mapa: 1 }, ''); trampa = true }
+  else if (!fuera && trampa) { trampa = false; ignorarPop = true; history.back() }
+}
+function atras() {
+  if (!$('menu-mas').hidden) { cerrarMenu(); return }
+  if (vista === 'buscar') cerrarBusqueda()
+  else if (vista === 'ficha') volverDeFicha()
+  else if (vista === 'acerca') { vista = vistaAntes === 'acerca' || vistaAntes === 'ficha' ? (decanatoSel ? 'decanato' : 'inicio') : vistaAntes; panelEstado('medio'); render() }
+  else if (vista === 'cercanas') { vista = decanatoSel ? 'decanato' : 'inicio'; panelEstado('medio'); render() }
+  else if (vista === 'decanato') verTodo()
+}
+window.addEventListener('popstate', () => {
+  if (ignorarPop) { ignorarPop = false; return }
+  trampa = false
+  if (!datos) return
+  atras()
+  sincronizarHistoria() // si quedó fuera del inicio, vuelve a poner la entrada de más
+})
+
+// ---------- búsqueda ----------
+// En el celular se abre con la lupa de arriba: la hoja sube entera con el buscador y el teclado.
+function abrirBusqueda() {
+  cerrarMenu()
+  if (vista !== 'buscar') vistaAntes = vista
+  vista = 'buscar'
+  panelEstado('alto'); render()
+  $('q').focus()
+}
+function cerrarBusqueda() {
+  texto = ''; ($('q') as HTMLInputElement).value = ''; $('q').blur()
+  vista = vistaAntes === 'buscar' || (vistaAntes === 'ficha' && !sel) ? (decanatoSel ? 'decanato' : 'inicio') : vistaAntes
+  panelEstado('medio'); render()
 }
 
 // en una ficha, la hoja a media altura muestra hasta los botones de contacto y el de Google Maps
-function altoFicha(): number | null {
-  const fin = $('contenido').querySelector('.acciones-ficha')
-  return fin ? fin.getBoundingClientRect().bottom - $('panel').getBoundingClientRect().top + 14 : null
-}
+// (en el inicio, hasta el final: así queda más mapa a la vista)
+const altoHasta = (fin: Element | null) => (fin ? fin.getBoundingClientRect().bottom - $('panel').getBoundingClientRect().top + 14 : null)
+const altoFicha = () => altoHasta($('contenido').querySelector('.acciones-ficha'))
 
 function verTodo() {
   cerrarMenu()
@@ -207,6 +244,7 @@ function radioElegido(): string | null {
 function seleccionar(id: string) {
   const l = porId.get(id), c = porIdCol.get(id)
   const x = l ?? c; if (!x) return
+  if (document.activeElement === $('q')) $('q').blur() // cierra el teclado
   if (vista !== 'ficha') vistaPrevia = { centro: mapa.getCenter(), zoom: mapa.getZoom() }
   if (c && !colegiosOn) colegiosOn = true
   const dec = l?.decanato || (c ? decanatoDeColegio.get(c.id) : undefined)
@@ -222,7 +260,8 @@ function seleccionar(id: string) {
 function guardarColegios() { try { localStorage.setItem(CLAVE_COLEGIOS, colegiosOn ? '1' : '0') } catch { /* sin localStorage */ } }
 function irAMenu(menu: string) {
   cerrarMenu()
-  if (menu === 'colegios') { colegiosOn = !colegiosOn; guardarColegios(); render() }
+  if (menu === 'todo') verTodo()
+  else if (menu === 'colegios') { colegiosOn = !colegiosOn; guardarColegios(); render() }
   else if (menu === 'acerca') { if (vista !== 'acerca') vistaAntes = vista; vista = 'acerca'; panelEstado('alto'); render() }
 }
 
@@ -267,10 +306,13 @@ function eventos() {
   $('q').addEventListener('input', e => {
     texto = (e.target as HTMLInputElement).value.trim()
     if (texto) { if (vista !== 'buscar' && vista !== 'ficha') vistaAntes = vista; vista = 'buscar'; sel = null }
-    else if (vista === 'buscar') vista = decanatoSel ? 'decanato' : 'inicio'
+    else if (vista === 'buscar' && !esMovil()) vista = decanatoSel ? 'decanato' : 'inicio' // en el celular queda abierto, con la ayuda
     render()
   })
-  $('q').addEventListener('focus', () => { if (esMovil() && panelActual() === 'mini') panelEstado('medio') })
+  $('q').addEventListener('focus', () => { if (esMovil() && panelActual() !== 'alto') panelEstado('alto') })
+  $('q').addEventListener('keydown', e => { if (e.key === 'Enter') $('q').blur() }) // "buscar" del teclado: lo baja para ver los resultados
+  $('buscar-cerrar').addEventListener('click', () => atras())
+  $('btn-buscar').addEventListener('click', abrirBusqueda)
   $('btn-todo').addEventListener('click', verTodo)
   $('btn-mas').addEventListener('click', e => { e.stopPropagation(); alternarMenu() })
   $('menu-mas').addEventListener('click', e => { const b = (e.target as HTMLElement).closest<HTMLElement>('[data-menu]'); if (b) irAMenu(b.dataset.menu!) })
@@ -285,26 +327,22 @@ function eventos() {
     if (acc) {
       e.preventDefault()
       const a = acc.dataset.accion
-      if (a === 'cerrar') volverDeFicha()
+      if (a === 'cerrar' || a === 'volver') atras()
       else if (a === 'ir') seleccionar(acc.dataset.id!)
       else if (a === 'todos') verTodo()
-      else if (a === 'decanato') { vista = 'decanato'; render() }
-      else if (a === 'volver') { vista = vistaAntes === 'acerca' || vistaAntes === 'ficha' ? (decanatoSel ? 'decanato' : 'inicio') : vistaAntes; render() }
-      else if (a === 'cerca') { vista = 'cercanas'; pedirUbicacion(render); panelEstado('alto') }
+      else if (a === 'decanato') { vista = 'decanato'; panelEstado('medio'); render() }
+      else if (a === 'cerca') { vista = 'cercanas'; panelEstado('medio'); pedirUbicacion(render) }
       else if (a === 'cerca-aqui') { if (ubic) render(); else pedirUbicacion(render) }
-      else if (a === 'buscar-abrir') { buscadorAbierto = true; render(); $('q').focus() }
+      else if (a === 'colegios') { colegiosOn = !colegiosOn; guardarColegios(); render() }
+      else if (a === 'buscar-en') { const q = acc.dataset.q ?? ''; ($('q') as HTMLInputElement).value = q; texto = q; render() }
       return
     }
     const it = t.closest<HTMLElement>('[data-id]'); if (it) seleccionar(it.dataset.id!)
   })
-  $('contenido').addEventListener('change', e => {
-    const t = e.target as HTMLInputElement
-    if (t.id === 'chk-colegios') { colegiosOn = t.checked; guardarColegios(); refrescarMarcadores() }
-  })
   mapa.on('click', e => {
     const p = puntoEn(e.point); if (p) { seleccionar(p.properties.id); return }
     const z = zonas.zonaEn(e.lngLat.lng, e.lngLat.lat); if (z) { elegirDecanato(z); return }
-    if (vista === 'ficha') volverDeFicha(); cerrarMenu()
+    if (vista === 'ficha') atras(); cerrarMenu()
   })
   mapa.on('mousemove', e => {
     if (!conMouse) return
@@ -325,7 +363,7 @@ function eventos() {
     if (t === tramo) return
     tramo = t; zonas.etiquetasGrandes(z < Z_ICONOS); refrescarMarcadores()
   })
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('menu-mas').hidden) cerrarMenu(); else if (vista === 'ficha') volverDeFicha() } })
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') atras() })
 }
 
 // ---------- arranque ----------
@@ -362,7 +400,7 @@ async function iniciar() {
   zonas = crearZonas(mapa, datos.zonas, datos.radios, d => plural(parroquias.filter(p => p.decanato === d).length, 'parroquia', 'parroquias'))
   // los colegios no traen decanato: es el de la zona en la que caen
   for (const c of datos.colegios) { if (c.lat == null || c.lon == null) continue; const d = zonas.zonaEn(c.lon, c.lat); if (d) { colegiosPorDecanato.set(d, [...(colegiosPorDecanato.get(d) ?? []), c]); decanatoDeColegio.set(c.id, d) } }
-  hoja = crearHoja($('panel'), $('handle'), $('contenido'), document.querySelector<HTMLElement>('.buscador')!, esMovil)
+  hoja = crearHoja($('panel'), $('handle'), $('contenido'), $('buscador'), $('top'), esMovil)
   renderLeyenda(); eventos()
   if (esMovil()) panelEstado('medio')
   render()

@@ -20,7 +20,7 @@ const CURVA = 'cubic-bezier(0.22, 0.9, 0.3, 1)'
 
 export interface Hoja {
   estado(): PanelEstado
-  poner(e: PanelEstado): void
+  poner(e: PanelEstado, animar?: boolean): void // animar = false: cambia de golpe (la búsqueda abre así)
   altura(e?: PanelEstado): number // px que tapa la hoja en ese estado (0 en escritorio)
   medirMini(): void // recalcula la altura mini (cambia según la vista)
   fijarMedio(px: number | null): void // altura de "medio" para esta vista (null: la de siempre)
@@ -61,7 +61,8 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
     panel.style.transition = 'none'; panel.style.transform = ''; panel.style.height = ''
   }
   function animar() {
-    const h0 = desde!; desde = null
+    if (desde === null) return // se canceló (un cambio sin animación en la misma tarea)
+    const h0 = desde; desde = null
     limpiar()
     const h1 = panel.getBoundingClientRect().height // con la clase del estado nuevo (y lo que haya cambiado la vista)
     if (Math.abs(h1 - h0) < 2) return
@@ -74,10 +75,11 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
     fin = window.setTimeout(() => { fin = null; panel.style.transition = 'none'; panel.style.transform = ''; panel.style.height = ''; revisarMas() }, DURACION_MS + 40)
   }
 
-  function poner(e: PanelEstado) {
+  function poner(e: PanelEstado, conAnimacion = true) {
     const cambia = e !== actual
     // la animación se arma al final de la tarea, cuando la vista ya terminó de cambiar (la altura de "medio" depende de ella)
-    if (esMovil() && desde === null) { desde = visible(); queueMicrotask(animar) }
+    if (!conAnimacion) desde = null
+    else if (esMovil() && desde === null) { desde = visible(); queueMicrotask(animar) }
     if (fin !== null || panel.style.transform) limpiar()
     actual = e
     panel.classList.remove('mini', 'medio', 'alto')
@@ -226,5 +228,5 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
   new ResizeObserver(revisarMas).observe(contenido) // cambia de alto con la hoja
   panel.addEventListener('transitionend', revisarMas)
 
-  return { estado: () => actual, poner: (e: PanelEstado) => { poner(e); revisarMas() }, altura, medirMini, fijarMedio, revisarMas }
+  return { estado: () => actual, poner: (e: PanelEstado, animar = true) => { poner(e, animar); revisarMas() }, altura, medirMini, fijarMedio, revisarMas }
 }

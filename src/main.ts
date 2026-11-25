@@ -128,7 +128,7 @@ function puntoEn(p: { x: number; y: number }): any | null {
 // ---------- panel (en el celular es una hoja inferior) ----------
 // hoja.ts: arrastre con el dedo y las tres alturas
 let hoja: Hoja
-const panelEstado = (e: PanelEstado) => hoja.poner(e)
+const panelEstado = (e: PanelEstado, animar = true) => hoja.poner(e, animar)
 const panelActual = (): PanelEstado => hoja.estado()
 const altoHoja = (e: PanelEstado = panelActual()) => hoja.altura(e)
 function areaLibre(e: PanelEstado): { arriba: number; abajo: number } {
@@ -190,7 +190,7 @@ function sincronizarHistoria() {
 function atras() {
   if (!$('menu-mas').hidden) { cerrarMenu(); return }
   // en la búsqueda del celular, primero vuelve a la búsqueda vacía (con las localidades) y después la cierra
-  if (vista === 'buscar' && texto && esMovil()) { texto = ''; ($('q') as HTMLInputElement).value = ''; panelEstado('alto'); render() }
+  if (vista === 'buscar' && texto && esMovil()) { texto = ''; ($('q') as HTMLInputElement).value = ''; panelEstado('alto', false); render() }
   else if (vista === 'buscar') cerrarBusqueda()
   else if (vista === 'ficha') volverDeFicha()
   else if (vista === 'acerca') { vista = vistaAntes === 'acerca' || vistaAntes === 'ficha' ? (decanatoSel ? 'decanato' : 'inicio') : vistaAntes; panelEstado('medio'); render() }
@@ -212,8 +212,10 @@ function abrirBusqueda() {
   cerrarMenu()
   if (vista !== 'buscar') { vistaAntes = vista; selAntes = vista === 'ficha' ? sel : null }
   vista = 'buscar'
-  panelEstado('alto'); render()
-  $('q').focus()
+  // de golpe, sin deslizar: si el teclado se abre mientras la hoja sube, el navegador corre la pantalla para mostrar
+  // el buscador y se pelea con la animación (se ve lento). Y el foco sin correr nada (preventScroll).
+  panelEstado('alto', false); render()
+  $('q').focus({ preventScroll: true })
 }
 function cerrarBusqueda() {
   texto = ''; ($('q') as HTMLInputElement).value = ''; $('q').blur()
@@ -324,7 +326,7 @@ function eventos() {
     else if (vista === 'buscar' && !esMovil()) vista = decanatoSel ? 'decanato' : 'inicio' // en el celular queda abierto, con la ayuda
     render()
   })
-  $('q').addEventListener('focus', () => { if (esMovil() && panelActual() !== 'alto') panelEstado('alto') })
+  $('q').addEventListener('focus', () => { if (esMovil() && panelActual() !== 'alto') panelEstado('alto', false) })
   $('q').addEventListener('keydown', e => { if (e.key === 'Enter') $('q').blur() }) // "buscar" del teclado: lo baja para ver los resultados
   $('buscar-cerrar').addEventListener('click', () => atras())
   $('btn-buscar').addEventListener('click', abrirBusqueda)

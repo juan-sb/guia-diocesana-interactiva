@@ -68,7 +68,6 @@ export function vistaInicio(ctx: CtxVistas): string {
   return `<section class="avance-total">
       <p class="avance-txt"><b>${ctx.parroquias.length} parroquias</b> y ${capillas.length} capillas en ${ctx.datos.decanatos.length} decanatos</p>
     </section>
-    <h2 class="invita">Elegí un decanato</h2>
     <div class="deca-cards">${cards}</div>
     <button type="button" class="btn grande" data-accion="cerca">Las más cercanas a mí</button>
     <div class="colegios-linea">
@@ -126,7 +125,7 @@ export function vistaBuscar(ctx: CtxVistas, q: string): string {
 // ---- fichas ----
 function cab(titulo: string, sub: string, extra = ''): string {
   return `<div class="ficha-cab"><button type="button" class="btn-icono" data-accion="cerrar" aria-label="Volver">←</button>
-    <div><h2>${esc(titulo)}</h2><p class="sub">${sub}</p>${extra}</div></div>`
+    <div><h2>${esc(titulo)}</h2><p class="sub">${sub}${extra ? ` ${extra}` : ''}</p></div></div>`
 }
 // Todo el contacto que publica la Guía, a mano: llamar (en el celular), WhatsApp, Instagram y, si no hay teléfono ni WhatsApp, el correo.
 interface Contacto { tel: string | null; wa: string | null; mail: string | null; ig: { url: string; texto: string } | null }

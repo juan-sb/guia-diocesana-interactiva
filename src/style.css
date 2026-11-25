@@ -160,6 +160,9 @@ h1, h2, h3, h4, h5, p { margin: 0; }
 .ficha-cab { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
 .ficha-cab h2 { font-size: 21px; line-height: 1.25; }
 .sub { color: var(--muted); font-size: 14px; }
+/* el decanato va en el mismo renglón que "Parroquia · Barrio" */
+.sub .chip-zona { margin: 0 0 0 4px; padding: 1px 8px 1px 4px; font-size: 12px; vertical-align: 1px; gap: 4px; }
+.sub .chip-zona i { width: 11px; height: 11px; border-radius: 3px; }
 .estado-caja {
   display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius);
   border: 2px solid var(--c); background: color-mix(in srgb, var(--c) 9%, #fff); margin-bottom: 12px;
@@ -359,6 +362,8 @@ h2 { font-weight: 700; }
 .buscador input:focus { outline-color: var(--oro); }
 /* decanatos sutiles: tarjetas blancas con una franja del color de la zona */
 .deca-card { background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--zb); }
+/* tarjetas justas: sin alto mínimo ni aire de más */
+.deca-card { min-height: 0; gap: 2px; padding: 9px 12px; }
 .deca-card:hover { background: color-mix(in srgb, var(--z) 30%, #fff); }
 .deca-nombre { color: var(--azul); }
 .deca-nombre i { display: none; }

@@ -23,10 +23,14 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 //  - barrio: íconos y capillas
 //  - decanato elegido: sus parroquias y capillas, con los radios como líneas finas
 //  - parroquia elegida: su radio marcado y sus capillas resaltadas, con la línea
-// En la versión pública las parroquias y las capillas se ven con su ícono desde la vista de toda la diócesis (sin puntitos);
+// En la versión pública las parroquias se ven con su ícono desde la vista de toda la diócesis (sin puntitos);
 // de lejos los íconos se achican para no taparse (mapa/capas.ts, icon-size).
+// Capillas y colegios: en la vista de toda la diócesis no se muestran (queda muy cargado); aparecen con un poco de zoom,
+// MAS_ZOOM_CAPILLAS por encima del zoom con el que se ve toda la diócesis (así vale igual en el celular y en la compu),
+// o al elegir un decanato. Para volver a mostrar todo siempre: MAS_ZOOM_CAPILLAS = -Infinity.
 const Z_ICONOS = -1
-const CAPILLAS_DESDE_ZOOM = -1
+const MAS_ZOOM_CAPILLAS = 0.4
+let CAPILLAS_DESDE_ZOOM = -1 // se fija al arrancar: zoom de la diócesis entera + MAS_ZOOM_CAPILLAS
 const Z_OTROS_DECANATOS = -1
 const Z_BARRIO = 14
 const DURACION = 600
@@ -99,6 +103,7 @@ function refrescarMarcadores() {
   for (const c of datos.colegios) {
     if (c.lat == null || c.lon == null) continue
     if (!colegiosOn && c.id !== sel) continue
+    if (c.id !== sel && !decanatoSel && z < CAPILLAS_DESDE_ZOOM) continue // de lejos, solo parroquias
     // elegido algo: todo apagado menos lo elegido; con un decanato elegido, los colegios de los otros decanatos apagados
     const atenuado = hayElegido ? c.id !== sel && !ids.has(c.id) : !!decanatoSel && decanatoDeColegio.get(c.id) !== decanatoSel
     const comoPunto = c.id !== sel && !decanatoSel && z < Z_ICONOS
@@ -417,6 +422,8 @@ async function iniciar() {
   zonas.etiquetasGrandes(mapa.getZoom() < Z_ICONOS)
   limitarNavegacion(mapa, limites, esMovil() ? 0.9 : 0)
   mapa.fitBounds(zonas.todas ?? limites.bounds, { ...opcionesEncuadre(panelActual()), duration: 0 })
+  CAPILLAS_DESDE_ZOOM = mapa.getZoom() + MAS_ZOOM_CAPILLAS
+  refrescarMarcadores()
   setTimeout(() => mapa.resize(), 100)
 }
 iniciar()

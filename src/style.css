@@ -457,3 +457,23 @@ h2 { font-weight: 700; }
 .conmuta .sw { width: 24px; height: 14px; }
 .conmuta .sw::after { width: 10px; height: 10px; }
 .conmuta[aria-pressed="true"] .sw::after { transform: translateX(10px); }
+
+/* ---- ficha: acciones como fila de botones redondos con ícono y una palabra (vistas.ts, acciones) ---- */
+.acciones-ficha { flex-direction: row; flex-wrap: nowrap; gap: 2px; margin: 2px 0 12px; }
+.accion-ico {
+  flex: 1 1 0; min-width: 0; max-width: 82px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0;
+  text-decoration: none; color: var(--azul); font-size: 12.5px; font-weight: 600; line-height: 1.2; -webkit-tap-highlight-color: transparent;
+}
+.accion-ico .circ {
+  width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  border: 1px solid #d6dde6; background: #fff; transition: background 0.15s, border-color 0.15s;
+}
+.accion-ico:hover .circ, .accion-ico:active .circ { border-color: var(--azul); background: #f1f5fa; }
+.accion-ico.primario .circ { background: var(--azul); border-color: var(--azul); color: #fff; }
+.accion-ico.primario:hover .circ, .accion-ico.primario:active .circ { background: #002c54; }
+.accion-ico .lbl { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 769px) { .accion-ico.llamar { display: none; } }
+/* "Cómo llegar" puede pasarse un poco de su lugar: los vecinos tienen palabras cortas y centradas */
+.accion-ico { overflow: visible; }
+.accion-ico .lbl { overflow: visible; text-overflow: clip; font-size: min(12.5px, 3.3vw); }
+.nota-capilla { font-size: 14.5px; color: var(--muted); }

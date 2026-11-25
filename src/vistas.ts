@@ -26,10 +26,11 @@ export function chipZona(decanato: string, i = 0): string {
   return `<span class="chip-zona" style="--z:${rellenoZona(decanato, i)};--zb:${e.borde}"><i></i>${esc(decanato)}</span>`
 }
 
+// "Cómo llegar": Google Maps con el recorrido desde donde está la persona
 export function urlMaps(l: { lat: number | null; lon: number | null; direccion: string; localidad: string }): string | null {
-  if (l.lat != null && l.lon != null) return `https://www.google.com/maps/search/?api=1&query=${l.lat},${l.lon}`
+  if (l.lat != null && l.lon != null) return `https://www.google.com/maps/dir/?api=1&destination=${l.lat},${l.lon}`
   if (!l.direccion || /^(s\/d|sin sede central)$/i.test(l.direccion)) return null
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${l.direccion}, ${l.localidad}, Buenos Aires, Argentina`)}`
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${l.direccion}, ${l.localidad}, Buenos Aires, Argentina`)}`
 }
 
 // ---- un lugar o un colegio en una lista ----
@@ -133,21 +134,35 @@ function cab(titulo: string, sub: string, extra = '', dir = ''): string {
     <div><h2>${esc(titulo)}</h2><p class="sub">${sub}${extra ? ` ${extra}` : ''}</p>${dir ? `<p class="dir">${dir}</p>` : ''}</div></div>`
 }
 const sinDir = (d: string) => !d || /^(s\/d|sin sede central)$/i.test(d)
-// Todo el contacto que publica la Guía, a mano: llamar (en el celular), WhatsApp, Instagram y, si no hay teléfono ni WhatsApp, el correo.
-interface Contacto { tel: string | null; wa: string | null; mail: string | null; ig: { url: string; texto: string } | null }
-function acciones({ tel, wa, mail, ig }: Contacto, llegar: string | null): string {
-  const pares = [
-    tel ? `<a class="btn accion llamar" href="${telHref(tel)}"><b>Llamar</b><small>${esc(tel)}</small></a>` : '', // en el celular, botón
-    wa ? `<a class="btn accion" href="${waHref(wa)}" target="_blank" rel="noopener noreferrer"><b>WhatsApp</b><small>${esc(wa)}</small></a>` : '',
-    !tel && !wa && mail ? `<a class="btn accion" href="mailto:${esc(mail)}"><b>Correo</b><small>${esc(mail)}</small></a>` : '',
-    ig ? `<a class="btn accion" href="${esc(ig.url)}" target="_blank" rel="noopener noreferrer"><b>Instagram</b><small>${esc(ig.texto)}</small></a>` : '',
-  ].filter(Boolean)
-  // en escritorio no hay a dónde llamar: se muestra el número, copiable
-  const numero = tel ? `<div class="tel-escritorio"><span class="det">Teléfono</span><span class="num">${esc(tel)}</span><button type="button" class="btn chico" data-copiar="${esc(tel)}">Copiar</button></div>` : ''
-  return `<div class="acciones-ficha">${numero}${pares.length ? `<div class="par-acciones${pares.length === 1 ? ' uno' : ''}">${pares.join('')}</div>` : ''}
-    ${llegar ? `<a class="btn primario grande" href="${esc(llegar)}" target="_blank" rel="noopener noreferrer">Ver en Google Maps</a>` : '<span class="btn deshabilitado grande">Ver en Google Maps (no tenemos la dirección)</span>'}</div>`
+// Acciones: una fila de botones redondos con ícono y una palabra, como en Google Maps. Los números, correos y redes
+// completos van abajo, en "Datos". En escritorio no se muestra "Llamar" (el número está en los datos).
+const svg = (cuerpo: string, relleno = false) => `<svg width="22" height="22" viewBox="0 0 24 24" ${relleno ? 'fill="currentColor" stroke="none"' : 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'} aria-hidden="true">${cuerpo}</svg>`
+const ICONOS = {
+  llegar: svg('<path d="M12 2.8l9.2 9.2-9.2 9.2L2.8 12z"/><path d="M9 15v-2.5a1.5 1.5 0 0 1 1.5-1.5H15"/><path d="M13 9l2 2-2 2"/>'),
+  llamar: svg('<path d="M6.5 3.5h3l1.5 4.5-2 1.3a11 11 0 0 0 5.7 5.7l1.3-2 4.5 1.5v3a2 2 0 0 1-2.2 2A17 17 0 0 1 4.5 5.7a2 2 0 0 1 2-2.2z"/>'),
+  whatsapp: svg('<path d="M20.5 11.7a8.6 8.6 0 0 1-12.7 7.5L3.5 20.5l1.4-4.1a8.6 8.6 0 1 1 15.6-4.7z"/><path d="M9 8.6c.3-.6.6-.6.9-.6h.4c.2 0 .4.1.5.4l.6 1.5c.1.3 0 .5-.1.6l-.5.6c-.1.1-.1.3 0 .5a6 6 0 0 0 2.5 2.4c.2.1.4.1.5 0l.6-.7c.2-.2.4-.2.6-.1l1.5.7c.2.1.3.3.3.5v.4c0 .7-.7 1.3-1.4 1.4-.6.1-1.6 0-3.1-.8a8 8 0 0 1-3.5-3.5c-.6-1.3-.7-2.3-.3-3.3z" fill="currentColor" stroke="none"/>'),
+  instagram: svg('<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="3.8"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/>'),
+  correo: svg('<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/>'),
+  facebook: svg('<path d="M14.5 21v-7.5h2.7l.4-3.2h-3.1V8.4c0-.9.3-1.6 1.6-1.6h1.6V4a21 21 0 0 0-2.4-.1c-2.4 0-4 1.4-4 4.1v2.4H8.6v3.2h2.7V21z"/>', true),
+  web: svg('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.3 2.3 3.4 5.2 3.4 8.5s-1.1 6.2-3.4 8.5c-2.3-2.3-3.4-5.2-3.4-8.5s1.1-6.2 3.4-8.5z"/>'),
 }
-const instagram = (u: string) => (u ? { url: u, texto: '@' + u.replace(/\/$/, '').split('/').pop() } : null)
+interface Contacto { tel?: string | null; wa?: string | null; mail?: string | null; ig?: string | null; fb?: string | null; web?: string | null }
+const MAX_ACCIONES = 5
+function acciones(c: Contacto, llegar: string | null): string {
+  const boton = (clase: string, href: string, ico: string, texto: string, afuera = true) =>
+    `<a class="accion-ico ${clase}" href="${esc(href)}"${afuera ? ' target="_blank" rel="noopener noreferrer"' : ''}><span class="circ">${ico}</span><span class="lbl">${texto}</span></a>`
+  const bs = [
+    llegar ? boton('primario', llegar, ICONOS.llegar, 'Cómo llegar') : '',
+    c.tel ? boton('llamar', telHref(c.tel), ICONOS.llamar, 'Llamar', false) : '',
+    c.wa ? boton('', waHref(c.wa), ICONOS.whatsapp, 'WhatsApp') : '',
+    c.ig ? boton('', c.ig, ICONOS.instagram, 'Instagram') : '',
+    c.mail ? boton('', `mailto:${c.mail}`, ICONOS.correo, 'Correo', false) : '',
+    c.fb ? boton('', c.fb, ICONOS.facebook, 'Facebook') : '',
+    c.web ? boton('', c.web, ICONOS.web, 'Sitio web') : '',
+  ].filter(Boolean).slice(0, MAX_ACCIONES)
+  return bs.length ? `<div class="acciones-ficha">${bs.join('')}</div>` : ''
+}
+const url = (u: string) => (u && esUrl(u) ? u : null)
 const ubicacionTexto = (x: { lat: number | null; revisar: boolean }) => (x.lat == null ? 'Todavía no está ubicado en el mapa.' : x.revisar ? 'La ubicación en el mapa es aproximada.' : '')
 
 export function fichaLugar(l: Lugar, ctx: CtxVistas, chip: string): string {
@@ -155,24 +170,28 @@ export function fichaLugar(l: Lugar, ctx: CtxVistas, chip: string): string {
   const base = madre ?? l // los datos de contacto son los de la parroquia
   const capillas = l.capillas.map(id => ctx.porId.get(id)).filter((x): x is Lugar => !!x)
   const colegios = l.colegios_vinculados.map(id => ctx.porIdCol.get(id)).filter((x): x is Colegio => !!x)
-  const tels = l.telefonos.length ? l.telefonos : base.telefonos
+  // una capilla sin datos propios usa los de su parroquia (y en "Datos" se aclara)
+  const propio = <T,>(xs: T[], ys: T[]) => (xs.length ? { v: xs, prestado: false } : { v: ys, prestado: ys.length > 0 && base !== l })
+  const tels = propio(l.telefonos, base.telefonos), was = propio(l.whatsapp, base.whatsapp), mails = propio(l.emails, base.emails)
   const erec = l.ereccion.match(/(\d{4})/)?.[1]
+  const r = l.web || l.facebook || l.instagram || l.youtube ? l : base // redes: las propias o, en una capilla, las de la parroquia
+  const arroba = (u: string) => '@' + u.replace(/\/$/, '').split('/').pop()
   const redes = [
-    l.web ? (esUrl(l.web) ? link(l.web, 'Sitio web') : esc(l.web)) : '',
-    l.facebook ? (esUrl(l.facebook) ? link(l.facebook, 'Facebook') : `Facebook: ${esc(l.facebook)}`) : '',
-    l.instagram ? (esUrl(l.instagram) ? link(l.instagram, 'Instagram') : `Instagram: ${esc(l.instagram)}`) : '',
-    l.youtube ? (esUrl(l.youtube) ? link(l.youtube, 'YouTube') : `YouTube: ${esc(l.youtube)}`) : '',
+    r.web ? (esUrl(r.web) ? link(r.web, r.web.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')) : esc(r.web)) : '',
+    r.facebook ? (esUrl(r.facebook) ? `Facebook: ${link(r.facebook, arroba(r.facebook))}` : `Facebook: ${esc(r.facebook)}`) : '',
+    r.instagram ? (esUrl(r.instagram) ? `Instagram: ${link(r.instagram, arroba(r.instagram))}` : `Instagram: ${esc(r.instagram)}`) : '',
+    r.youtube ? (esUrl(r.youtube) ? link(r.youtube, 'YouTube') : `YouTube: ${esc(r.youtube)}`) : '',
   ].filter(Boolean).join('<br>')
   const dir = sinDir(l.direccion) ? '' : `${esc(l.direccion)}${l.cp ? ` <span class="det">(CP ${esc(l.cp)})</span>` : ''}`
   return `${cab(l.nombre, `${esc(l.tipo)} · ${esc(l.localidad || l.localidad_guia)}`, chip, dir)}
-  ${acciones({ tel: tels[0] ?? null, wa: (l.whatsapp.length ? l.whatsapp : base.whatsapp)[0] ?? null, mail: (l.emails.length ? l.emails : base.emails)[0] ?? null, ig: instagram(l.instagram || base.instagram) }, urlMaps(l))}
-  ${madre ? `<p>Capilla de la parroquia <a href="#" data-accion="ir" data-id="${madre.id}">${esc(madre.nombre)}</a>.</p>` : ''}
+  ${acciones({ tel: tels.v[0], wa: was.v[0], mail: mails.v[0], ig: url(l.instagram || base.instagram), fb: url(l.facebook || base.facebook), web: url(l.web || base.web) }, urlMaps(l))}
+  ${madre ? `<p class="nota-capilla">Capilla de la parroquia <a href="#" data-accion="ir" data-id="${madre.id}">${esc(madre.nombre)}</a>.${tels.prestado || was.prestado || mails.prestado || r !== l ? ' El contacto es el de la parroquia.' : ''}</p>` : ''}
   <section><h3>Datos</h3>
     <dl class="datos">
       ${dir ? '' : fila('Dirección', esc(l.direccion))}
-      ${fila('Teléfonos', l.telefonos.map(t => `<a href="${telHref(t)}">${esc(t)}</a>`).join('<br>'))}
-      ${fila('WhatsApp', l.whatsapp.map(esc).join('<br>'))}
-      ${fila('Correo', l.emails.map(m => `<a href="mailto:${esc(m)}">${esc(m)}</a>`).join('<br>'))}
+      ${fila('Teléfonos', tels.v.map(t => `<a href="${telHref(t)}">${esc(t)}</a>`).join('<br>'))}
+      ${fila('WhatsApp', was.v.map(t => `<a href="${waHref(t)}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>`).join('<br>'))}
+      ${fila('Correo', mails.v.map(m => `<a href="mailto:${esc(m)}">${esc(m)}</a>`).join('<br>'))}
       ${fila('Redes', redes)}
       ${fila(l.tipo === 'Capilla' ? 'Notas' : 'Desde', erec && l.tipo !== 'Capilla' ? `${esc(l.tipo)} desde ${erec}${/santuario/i.test(l.ereccion) ? ` <span class="det">(${esc(l.ereccion)})</span>` : ''}` : esc(l.notas_guia.join(' · ')))}
       ${fila('Ubicación', esc(ubicacionTexto(l)))}
@@ -187,7 +206,7 @@ export function fichaColegio(c: Colegio, ctx: CtxVistas): string {
   const niveles = [...new Set(c.niveles.map(n => n.nivel))].join(', ')
   const fuente = c.fuente.url && esUrl(c.fuente.url) ? link(c.fuente.url, c.fuente.nombre) : esc(c.fuente.nombre)
   return `${cab(c.nombre, `Colegio católico${c.localidad ? ' · ' + esc(c.localidad) : ''}${niveles ? ' · ' + esc(niveles) : ''}`, '', sinDir(c.direccion) ? '' : esc(c.direccion))}
-  ${acciones({ tel: c.telefonos[0] ?? null, wa: null, mail: c.emails[0] ?? null, ig: null }, urlMaps(c))}
+  ${acciones({ tel: c.telefonos[0], mail: c.emails[0] }, urlMaps(c))}
   <section><h3>Datos</h3>
     <dl class="datos">
       ${fila('Niveles', c.niveles.map(n => `${esc(n.nivel)}: ${esc(n.nombre)}`).join('<br>'))}

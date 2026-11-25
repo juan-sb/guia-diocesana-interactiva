@@ -179,7 +179,9 @@ function sincronizarHistoria() {
 }
 function atras() {
   if (!$('menu-mas').hidden) { cerrarMenu(); return }
-  if (vista === 'buscar') cerrarBusqueda()
+  // en la búsqueda del celular, primero vuelve a la búsqueda vacía (con las localidades) y después la cierra
+  if (vista === 'buscar' && texto && esMovil()) { texto = ''; ($('q') as HTMLInputElement).value = ''; panelEstado('alto'); render() }
+  else if (vista === 'buscar') cerrarBusqueda()
   else if (vista === 'ficha') volverDeFicha()
   else if (vista === 'acerca') { vista = vistaAntes === 'acerca' || vistaAntes === 'ficha' ? (decanatoSel ? 'decanato' : 'inicio') : vistaAntes; panelEstado('medio'); render() }
   else if (vista === 'cercanas') { vista = decanatoSel ? 'decanato' : 'inicio'; panelEstado('medio'); render() }
@@ -195,16 +197,18 @@ window.addEventListener('popstate', () => {
 
 // ---------- búsqueda ----------
 // En el celular se abre con la lupa de arriba: la hoja sube entera con el buscador y el teclado.
+let selAntes: string | null = null // la ficha que estaba abierta al empezar a buscar: al cerrar la búsqueda se vuelve a ella
 function abrirBusqueda() {
   cerrarMenu()
-  if (vista !== 'buscar') vistaAntes = vista
+  if (vista !== 'buscar') { vistaAntes = vista; selAntes = vista === 'ficha' ? sel : null }
   vista = 'buscar'
   panelEstado('alto'); render()
   $('q').focus()
 }
 function cerrarBusqueda() {
   texto = ''; ($('q') as HTMLInputElement).value = ''; $('q').blur()
-  vista = vistaAntes === 'buscar' || (vistaAntes === 'ficha' && !sel) ? (decanatoSel ? 'decanato' : 'inicio') : vistaAntes
+  if (vistaAntes === 'ficha' && selAntes && (porId.has(selAntes) || porIdCol.has(selAntes))) { const id = selAntes; selAntes = null; seleccionar(id); return }
+  vista = vistaAntes === 'buscar' || vistaAntes === 'ficha' ? (decanatoSel ? 'decanato' : 'inicio') : vistaAntes
   panelEstado('medio'); render()
 }
 

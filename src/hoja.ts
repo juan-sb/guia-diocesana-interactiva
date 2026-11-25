@@ -6,6 +6,8 @@
 // hacia abajo la cierra cuando el contenido ya está scrolleado arriba del todo (como Google Maps).
 // Al soltar, va a la altura más cercana a donde la habría llevado el envión.
 // Con la hoja en mini, tocar cualquier parte visible la abre.
+// Todo movimiento (arrastre y cambio de altura) es con transform, que lo hace la placa de video: cambiar la altura
+// cuadro a cuadro obliga a recalcular y repintar el panel entero sobre el mapa y en los celulares se ve en cámara lenta.
 
 export type PanelEstado = 'mini' | 'medio' | 'alto'
 const ORDEN: PanelEstado[] = ['mini', 'medio', 'alto']
@@ -13,6 +15,8 @@ const PROPORCION_MEDIO = 0.46
 const AIRE_ARRIBA = 8 // px entre la barra de arriba y la hoja en "alto"
 const UMBRAL = 6 // px que tiene que moverse el dedo antes de decidir si arrastra la hoja o scrollea
 const ENVION_MS = 180 // cuánto "proyecta" la velocidad al soltar
+const DURACION_MS = 260
+const CURVA = 'cubic-bezier(0.22, 0.9, 0.3, 1)'
 
 export interface Hoja {
   estado(): PanelEstado
@@ -48,19 +52,44 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
     panel.style.setProperty('--mini', `${mini}px`)
   }
 
+  // ---- animación: la hoja toma la altura más grande de las dos (abajo de todo, lo que sobra queda fuera de la pantalla)
+  // y se desplaza de la altura vieja a la nueva; al terminar queda con la altura del estado y sin desplazamiento.
+  const visible = () => window.innerHeight - panel.getBoundingClientRect().top // lo que se ve de la hoja, con el desplazamiento
+  let fin: number | null = null, desde: number | null = null
+  function limpiar() {
+    if (fin !== null) { clearTimeout(fin); fin = null }
+    panel.style.transition = 'none'; panel.style.transform = ''; panel.style.height = ''
+  }
+  function animar() {
+    const h0 = desde!; desde = null
+    limpiar()
+    const h1 = panel.getBoundingClientRect().height // con la clase del estado nuevo (y lo que haya cambiado la vista)
+    if (Math.abs(h1 - h0) < 2) return
+    const H = Math.max(h0, h1)
+    panel.style.height = `${H}px`
+    panel.style.transform = `translateY(${H - h0}px)`
+    void panel.offsetHeight
+    panel.style.transition = `transform ${DURACION_MS}ms ${CURVA}`
+    panel.style.transform = `translateY(${H - h1}px)`
+    fin = window.setTimeout(() => { fin = null; panel.style.transition = 'none'; panel.style.transform = ''; panel.style.height = ''; revisarMas() }, DURACION_MS + 40)
+  }
+
   function poner(e: PanelEstado) {
     const cambia = e !== actual
+    // la animación se arma al final de la tarea, cuando la vista ya terminó de cambiar (la altura de "medio" depende de ella)
+    if (esMovil() && desde === null) { desde = visible(); queueMicrotask(animar) }
+    if (fin !== null || panel.style.transform) limpiar()
     actual = e
     panel.classList.remove('mini', 'medio', 'alto')
     panel.classList.add(e)
-    panel.style.height = ''
+    if (desde === null) panel.style.height = ''
     manija.setAttribute('aria-label', e === 'mini' ? 'Abrir el panel' : 'Achicar el panel')
     manija.setAttribute('aria-expanded', String(e !== 'mini'))
     if (cambia) alCambiar(e)
   }
 
   // ---- arrastre ----
-  let y0 = 0, h0 = 0, modo: 'nada' | 'esperando' | 'hoja' | 'scroll' = 'nada', desdeContenido = false
+  let y0 = 0, h0 = 0, H = 0, modo: 'nada' | 'esperando' | 'hoja' | 'scroll' = 'nada', desdeContenido = false
   let muestras: [number, number][] = []
 
   const limitar = (h: number) => {
@@ -71,7 +100,7 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
   }
 
   function empezar(y: number, delContenido: boolean) {
-    y0 = y; h0 = panel.getBoundingClientRect().height
+    y0 = y
     modo = 'esperando'; desdeContenido = delContenido
     muestras = [[performance.now(), y]]
   }
@@ -93,8 +122,12 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
       if (modo === 'scroll') return false
       panel.classList.add('arrastrando')
       y0 = y // sin salto al empezar
+      // mientras se arrastra la hoja tiene la altura máxima y se desplaza (no se recalcula nada cuadro a cuadro)
+      h0 = visible(); limpiar()
+      H = altoMax() + 24
+      panel.style.height = `${H}px`
     }
-    panel.style.height = `${limitar(h0 + (y0 - y))}px`
+    panel.style.transform = `translateY(${H - limitar(h0 + (y0 - y))}px)`
     muestras.push([performance.now(), y]); if (muestras.length > 6) muestras.shift()
     return true
   }
@@ -113,18 +146,15 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
       const [ta, ya] = recientes[0], [tb, yb] = recientes[recientes.length - 1]
       if (tb > ta) v = (ya - yb) / (tb - ta)
     }
-    const h = panel.getBoundingClientRect().height
+    const h = visible()
     const proyectada = h + v * ENVION_MS
     let destino = ORDEN.reduce((a, b) => (Math.abs(altura(b) - proyectada) < Math.abs(altura(a) - proyectada) ? b : a))
     // un envión claro siempre cambia de estado, aunque haya sido corto
-    if (destino === actual && Math.abs(v) > 0.5) {
+    if (destino === actual && Math.abs(v) > 0.4) {
       const i = ORDEN.indexOf(actual) + (v > 0 ? 1 : -1)
       destino = ORDEN[Math.max(0, Math.min(ORDEN.length - 1, i))]
     }
-    // la altura arrastrada queda fija un instante y la transición la lleva a la del estado
-    panel.style.height = `${h}px`
-    void panel.offsetHeight
-    poner(destino)
+    poner(destino) // anima desde donde quedó el dedo
     return true
   }
 

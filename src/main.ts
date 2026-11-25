@@ -144,6 +144,7 @@ function encuadrar(b: Caja | null, e: PanelEstado = panelActual()) {
 }
 
 // ---------- navegación ----------
+let claveMapa = ''
 function render() {
   const cont = $('contenido')
   const ctx = ctxVistas()
@@ -160,11 +161,15 @@ function render() {
   }
   cont.scrollTop = 0
   $('menu-colegios').textContent = colegiosOn ? 'Ocultar los colegios del mapa' : 'Mostrar colegios en el mapa'
-  zonas.actualizar(decanatoSel, radioElegido())
+  // el mapa solo se toca si cambió lo que muestra (abrir la búsqueda, por ejemplo, no lo cambia): así la hoja se mueve sin esperar
+  const radio = radioElegido(), clave = `${decanatoSel}|${radio}|${sel}|${colegiosOn}`
+  const cambiaMapa = clave !== claveMapa
+  claveMapa = clave
+  if (cambiaMapa) zonas.actualizar(decanatoSel, radio)
   hoja.medirMini()
   hoja.fijarMedio(vista === 'ficha' ? altoFicha() : vista === 'inicio' ? altoHasta($('contenido').lastElementChild) : null)
   hoja.revisarMas()
-  refrescarMarcadores()
+  if (cambiaMapa) refrescarMarcadores()
   sincronizarHistoria()
 }
 

@@ -13,9 +13,9 @@ import { calcularLimites, limitarNavegacion, type Caja, type Limites } from './l
 import { crearZonas, type ControlZonas } from './zonas'
 import { chipZona, fichaColegio, fichaLugar, plural, vistaAcerca, vistaBuscar, vistaCercanas, vistaDecanato, vistaInicio, type CtxVistas } from './vistas'
 import { esc } from './util'
+import { crearHoja, type Hoja, type PanelEstado } from './hoja'
 
 type Vista = 'inicio' | 'decanato' | 'cercanas' | 'buscar' | 'ficha' | 'acerca'
-type PanelEstado = 'mini' | 'medio' | 'alto'
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
 // Zoom semántico (zooms de MapLibre):
@@ -122,10 +122,11 @@ function puntoEn(p: { x: number; y: number }): any | null {
 }
 
 // ---------- panel (en el celular es una hoja inferior) ----------
-const PANEL_ALTO: Record<PanelEstado, number> = { mini: 0, medio: 0.46, alto: 0.62 }
-function panelEstado(e: PanelEstado) { const p = $('panel'); p.classList.remove('mini', 'medio', 'alto'); p.classList.add(e) }
-function panelActual(): PanelEstado { const p = $('panel'); return p.classList.contains('mini') ? 'mini' : p.classList.contains('alto') ? 'alto' : 'medio' }
-const altoHoja = (e: PanelEstado = panelActual()) => (!esMovil() ? 0 : e === 'mini' ? 118 : Math.round(window.innerHeight * PANEL_ALTO[e]))
+// hoja.ts: arrastre con el dedo y las tres alturas
+let hoja: Hoja
+const panelEstado = (e: PanelEstado) => hoja.poner(e)
+const panelActual = (): PanelEstado => hoja.estado()
+const altoHoja = (e: PanelEstado = panelActual()) => hoja.altura(e)
 function areaLibre(e: PanelEstado): { arriba: number; abajo: number } {
   if (esMovil()) return { arriba: 56, abajo: altoHoja(e) }
   const ley = $('leyenda').getBoundingClientRect(), mp = $('mapa').getBoundingClientRect()
@@ -162,6 +163,7 @@ function render() {
   zonas.actualizar(decanatoSel, radioElegido())
   $('panel').classList.toggle('buscador-oculto', vista === 'decanato' && !buscadorAbierto)
   if (vista !== 'decanato') buscadorAbierto = false
+  hoja.medirMini()
   refrescarMarcadores()
 }
 
@@ -265,7 +267,6 @@ function eventos() {
   $('btn-mas').addEventListener('click', e => { e.stopPropagation(); alternarMenu() })
   $('menu-mas').addEventListener('click', e => { const b = (e.target as HTMLElement).closest<HTMLElement>('[data-menu]'); if (b) irAMenu(b.dataset.menu!) })
   document.addEventListener('click', e => { if (!(e.target as HTMLElement).closest('#menu-mas, #btn-mas')) cerrarMenu() })
-  $('handle').addEventListener('click', () => panelEstado(panelActual() === 'mini' ? 'medio' : 'mini'))
 
   $('contenido').addEventListener('click', e => {
     const t = e.target as HTMLElement
@@ -353,6 +354,7 @@ async function iniciar() {
   zonas = crearZonas(mapa, datos.zonas, datos.radios, d => plural(parroquias.filter(p => p.decanato === d).length, 'parroquia', 'parroquias'))
   // los colegios no traen decanato: es el de la zona en la que caen
   for (const c of datos.colegios) { if (c.lat == null || c.lon == null) continue; const d = zonas.zonaEn(c.lon, c.lat); if (d) { colegiosPorDecanato.set(d, [...(colegiosPorDecanato.get(d) ?? []), c]); decanatoDeColegio.set(c.id, d) } }
+  hoja = crearHoja($('panel'), $('handle'), $('contenido'), document.querySelector<HTMLElement>('.buscador')!, esMovil)
   renderLeyenda(); eventos()
   if (esMovil()) panelEstado('medio')
   render()

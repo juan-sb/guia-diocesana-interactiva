@@ -477,3 +477,6 @@ h2 { font-weight: 700; }
 .accion-ico { overflow: visible; }
 .accion-ico .lbl { overflow: visible; text-overflow: clip; font-size: min(12.5px, 3.3vw); }
 .nota-capilla { font-size: 14.5px; color: var(--muted); }
+/* las acciones siempre centradas, del mismo ancho, sean 2 o 5 */
+.acciones-ficha { justify-content: center; gap: 0; }
+.accion-ico { flex: 0 1 72px; max-width: none; }

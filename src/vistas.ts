@@ -133,6 +133,9 @@ function cab(titulo: string, sub: string, extra = '', dir = ''): string {
   return `<div class="ficha-cab"><button type="button" class="btn-icono" data-accion="cerrar" aria-label="Volver">←</button>
     <div><h2>${esc(titulo)}</h2><p class="sub">${sub}${extra ? ` ${extra}` : ''}</p>${dir ? `<p class="dir">${dir}</p>` : ''}</div></div>`
 }
+// en la cabecera de la ficha, los nombres largos abreviados para que entre en un renglón
+const CORTOS: Record<string, string> = { 'Remedios de Escalada': 'R. de Escalada' }
+const corta = (loc: string) => CORTOS[loc] ?? loc
 const sinDir = (d: string) => !d || /^(s\/d|sin sede central)$/i.test(d)
 // Acciones: una fila de botones redondos con ícono y una palabra, como en Google Maps. Los números, correos y redes
 // completos van abajo, en "Datos". En escritorio no se muestra "Llamar" (el número está en los datos).
@@ -183,7 +186,7 @@ export function fichaLugar(l: Lugar, ctx: CtxVistas, chip: string): string {
     r.youtube ? (esUrl(r.youtube) ? link(r.youtube, 'YouTube') : `YouTube: ${esc(r.youtube)}`) : '',
   ].filter(Boolean).join('<br>')
   const dir = sinDir(l.direccion) ? '' : `${esc(l.direccion)}${l.cp ? ` <span class="det">(CP ${esc(l.cp)})</span>` : ''}`
-  return `${cab(l.nombre, `${esc(l.tipo)} · ${esc(l.localidad || l.localidad_guia)}`, chip, dir)}
+  return `${cab(l.nombre, `${esc(l.tipo)} · ${esc(corta(l.localidad || l.localidad_guia))}`, chip, dir)}
   ${acciones({ tel: tels.v[0], wa: was.v[0], mail: mails.v[0], ig: url(l.instagram || base.instagram), fb: url(l.facebook || base.facebook), web: url(l.web || base.web) }, urlMaps(l))}
   ${madre ? `<p class="nota-capilla">Capilla de la parroquia <a href="#" data-accion="ir" data-id="${madre.id}">${esc(madre.nombre)}</a>.${tels.prestado || was.prestado || mails.prestado || r !== l ? ' El contacto es el de la parroquia.' : ''}</p>` : ''}
   <section><h3>Datos</h3>
@@ -205,7 +208,7 @@ export function fichaColegio(c: Colegio, ctx: CtxVistas): string {
   const lugares = c.lugares_vinculados.map(id => ctx.porId.get(id)).filter((x): x is Lugar => !!x)
   const niveles = [...new Set(c.niveles.map(n => n.nivel))].join(', ')
   const fuente = c.fuente.url && esUrl(c.fuente.url) ? link(c.fuente.url, c.fuente.nombre) : esc(c.fuente.nombre)
-  return `${cab(c.nombre, `Colegio católico${c.localidad ? ' · ' + esc(c.localidad) : ''}${niveles ? ' · ' + esc(niveles) : ''}`, '', sinDir(c.direccion) ? '' : esc(c.direccion))}
+  return `${cab(c.nombre, `Colegio católico${c.localidad ? ' · ' + esc(corta(c.localidad)) : ''}${niveles ? ' · ' + esc(niveles) : ''}`, '', sinDir(c.direccion) ? '' : esc(c.direccion))}
   ${acciones({ tel: c.telefonos[0], mail: c.emails[0] }, urlMaps(c))}
   <section><h3>Datos</h3>
     <dl class="datos">

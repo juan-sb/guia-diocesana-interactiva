@@ -1,6 +1,7 @@
 // Hoja inferior del celular (el panel): se arrastra con el dedo y se acomoda en tres alturas.
 //  - mini: solo la manija y el buscador (o la cabecera del decanato)
-//  - medio / alto: la lista o la ficha, con el mapa arriba
+//  - medio: la lista; en una ficha, solo lo justo (nombre y botones de contacto), así se ve el mapa
+//  - alto: todo, con el mapa arriba
 // Se arrastra desde la manija, el buscador o el contenido: hacia arriba la abre mientras no esté en "alto";
 // hacia abajo la cierra cuando el contenido ya está scrolleado arriba del todo (como Google Maps).
 // Al soltar, va a la altura más cercana a donde la habría llevado el envión.
@@ -18,15 +19,23 @@ export interface Hoja {
   poner(e: PanelEstado): void
   altura(e?: PanelEstado): number // px que tapa la hoja en ese estado (0 en escritorio)
   medirMini(): void // recalcula la altura mini (cambia según la vista)
+  fijarMedio(px: number | null): void // altura de "medio" para esta vista (null: la de siempre)
 }
 
 export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HTMLElement, buscador: HTMLElement,
   esMovil: () => boolean, alCambiar: (e: PanelEstado) => void = () => {}): Hoja {
   let actual: PanelEstado = 'medio'
   let mini = 84
+  let medio: number | null = null
 
   const altura = (e: PanelEstado = actual) =>
-    !esMovil() ? 0 : e === 'mini' ? mini : Math.round(window.innerHeight * PROPORCION[e])
+    !esMovil() ? 0 : e === 'mini' ? mini : e === 'medio' && medio ? medio : Math.round(window.innerHeight * PROPORCION[e])
+
+  function fijarMedio(px: number | null) {
+    medio = px && esMovil() ? Math.round(Math.min(px, window.innerHeight * PROPORCION.medio)) : null
+    if (medio) panel.style.setProperty('--medio', `${medio}px`)
+    else panel.style.removeProperty('--medio')
+  }
 
   function medirMini() {
     const hManija = manija.offsetHeight || 24
@@ -163,5 +172,5 @@ export function crearHoja(panel: HTMLElement, manija: HTMLElement, contenido: HT
   })
 
   window.addEventListener('resize', () => medirMini())
-  return { estado: () => actual, poner, altura, medirMini }
+  return { estado: () => actual, poner, altura, medirMini, fijarMedio }
 }

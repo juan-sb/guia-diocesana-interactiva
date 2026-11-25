@@ -161,10 +161,18 @@ function render() {
   cont.scrollTop = 0
   $('menu-colegios').textContent = colegiosOn ? 'Ocultar los colegios del mapa' : 'Mostrar colegios en el mapa'
   zonas.actualizar(decanatoSel, radioElegido())
-  $('panel').classList.toggle('buscador-oculto', vista === 'decanato' && !buscadorAbierto)
+  // en el celular, la ficha no lleva el buscador arriba (tiene su flecha para volver)
+  $('panel').classList.toggle('buscador-oculto', (vista === 'decanato' && !buscadorAbierto) || vista === 'ficha')
   if (vista !== 'decanato') buscadorAbierto = false
   hoja.medirMini()
+  hoja.fijarMedio(vista === 'ficha' ? altoFicha() : null)
   refrescarMarcadores()
+}
+
+// en una ficha, la hoja a media altura muestra hasta los botones de contacto y el de Google Maps
+function altoFicha(): number | null {
+  const fin = $('contenido').querySelector('.acciones-ficha')
+  return fin ? fin.getBoundingClientRect().bottom - $('panel').getBoundingClientRect().top + 14 : null
 }
 
 function verTodo() {
@@ -204,11 +212,11 @@ function seleccionar(id: string) {
   const dec = l?.decanato || (c ? decanatoDeColegio.get(c.id) : undefined)
   if (dec) decanatoSel = dec
   sel = id; vista = 'ficha'
-  panelEstado('alto'); render()
+  panelEstado('medio'); render()
   const radio = radioElegido()
   const cajaRadio = radio ? zonas.limitesRadio(radio) : null
-  if (cajaRadio) mapa.fitBounds(cajaRadio, { ...opcionesEncuadre('alto'), maxZoom: Z_BARRIO + 1, duration: DURACION, essential: true })
-  else if (x.lat != null) volarA(x.lat, x.lon!, Z_BARRIO, 'alto')
+  if (cajaRadio) mapa.fitBounds(cajaRadio, { ...opcionesEncuadre('medio'), maxZoom: Z_BARRIO + 1, duration: DURACION, essential: true })
+  else if (x.lat != null) volarA(x.lat, x.lon!, Z_BARRIO, 'medio')
 }
 
 function guardarColegios() { try { localStorage.setItem(CLAVE_COLEGIOS, colegiosOn ? '1' : '0') } catch { /* sin localStorage */ } }

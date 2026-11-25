@@ -247,7 +247,7 @@ code { font: 12px ui-monospace, Consolas, monospace; background: #f1f5f9; paddin
     overflow: hidden;
   }
   #panel.arrastrando { transition: none; user-select: none; }
-  #panel.medio { height: 46dvh; }
+  #panel.medio { height: calc(var(--medio, 46dvh) + env(safe-area-inset-bottom)); }
   #panel.alto { height: 62dvh; }
   #panel.mini { height: calc(var(--mini, 84px) + env(safe-area-inset-bottom)); }
   #panel.mini .vista { overflow: hidden; }
